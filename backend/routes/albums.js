@@ -49,6 +49,10 @@ router.post('/', adminAuth, async (req, res) => {
       return res.status(400).json({ message: 'Title and artistId are required' });
     }
 
+    if (typeof artistId !== 'string') {
+      return res.status(400).json({ message: 'Invalid artistId' });
+    }
+
     const artist = await Artist.findById(artistId);
     if (!artist) {
       return res.status(404).json({ message: 'Artist not found' });

@@ -26,7 +26,13 @@ router.put('/me', auth, async (req, res) => {
     const updates = {};
 
     if (username) {
-      const existing = await User.findOne({ username, _id: { $ne: req.user._id } });
+      if (typeof username !== 'string') {
+        return res.status(400).json({ message: 'Invalid username' });
+      }
+      const existing = await User.findOne({
+        username: username.trim(),
+        _id: { $ne: req.user._id }
+      });
       if (existing) {
         return res.status(409).json({ message: 'Username already taken' });
       }

@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 
 const app = express();
@@ -9,19 +10,37 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
+// Rate limiters
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please try again later.' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many authentication attempts, please try again later.' }
+});
+
 // Middleware
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:4200',
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(globalLimiter);
 
 // Serve static uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
-app.use('/api/auth', require('./routes/auth'));
+app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/songs', require('./routes/songs'));
 app.use('/api/playlists', require('./routes/playlists'));
 app.use('/api/artists', require('./routes/artists'));

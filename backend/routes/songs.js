@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const mongoose = require('mongoose');
 const Song = require('../models/Song');
 const Artist = require('../models/Artist');
 const Album = require('../models/Album');
@@ -9,6 +10,8 @@ const User = require('../models/User');
 const { auth, adminAuth } = require('../middleware/auth');
 
 const router = express.Router();
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id) && String(id).length === 24;
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -77,11 +80,13 @@ router.get('/trending', async (req, res) => {
 router.get('/search', async (req, res) => {
   try {
     const { q } = req.query;
-    if (!q || q.trim().length === 0) {
+    if (!q || typeof q !== 'string' || q.trim().length === 0) {
       return res.json([]);
     }
 
-    const regex = new RegExp(q.trim(), 'i');
+    // Escape special regex characters to prevent regex injection
+    const escaped = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped, 'i');
     const songs = await Song.find({
       $or: [{ title: regex }, { genre: regex }]
     })
@@ -98,6 +103,9 @@ router.get('/search', async (req, res) => {
 // GET /api/songs/:id
 router.get('/:id', async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Song not found' });
+    }
     const song = await Song.findById(req.params.id)
       .populate('artist', 'name image bio followers')
       .populate('album', 'title coverUrl releaseDate');
@@ -116,6 +124,9 @@ router.get('/:id', async (req, res) => {
 // GET /api/songs/:id/stream
 router.get('/:id/stream', async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Song not found' });
+    }
     const song = await Song.findById(req.params.id);
     if (!song) {
       return res.status(404).json({ message: 'Song not found' });
@@ -175,6 +186,10 @@ router.post('/', adminAuth, upload.fields([
       return res.status(400).json({ message: 'Title, artistId, and duration are required' });
     }
 
+    if (typeof artistId !== 'string') {
+      return res.status(400).json({ message: 'Invalid artistId' });
+    }
+
     const artist = await Artist.findById(artistId);
     if (!artist) {
       return res.status(404).json({ message: 'Artist not found' });
@@ -229,6 +244,9 @@ router.post('/', adminAuth, upload.fields([
 // DELETE /api/songs/:id (admin)
 router.delete('/:id', adminAuth, async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Song not found' });
+    }
     const song = await Song.findById(req.params.id);
     if (!song) {
       return res.status(404).json({ message: 'Song not found' });
@@ -250,6 +268,9 @@ router.delete('/:id', adminAuth, async (req, res) => {
 // POST /api/songs/:id/like
 router.post('/:id/like', auth, async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Song not found' });
+    }
     const song = await Song.findById(req.params.id);
     if (!song) {
       return res.status(404).json({ message: 'Song not found' });
@@ -279,6 +300,9 @@ router.post('/:id/like', auth, async (req, res) => {
 // POST /api/songs/:id/play
 router.post('/:id/play', auth, async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Song not found' });
+    }
     const song = await Song.findByIdAndUpdate(
       req.params.id,
       { $inc: { plays: 1 } },

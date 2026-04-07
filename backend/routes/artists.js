@@ -71,9 +71,11 @@ router.post('/', adminAuth, async (req, res) => {
 router.get('/search', async (req, res) => {
   try {
     const { q } = req.query;
-    if (!q) return res.json([]);
+    if (!q || typeof q !== 'string') return res.json([]);
 
-    const artists = await Artist.find({ name: new RegExp(q, 'i') })
+    // Escape special regex characters to prevent regex injection
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const artists = await Artist.find({ name: new RegExp(escaped, 'i') })
       .select('name image bio followers')
       .limit(20);
     res.json(artists);
