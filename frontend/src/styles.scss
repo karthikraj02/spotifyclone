@@ -1,0 +1,278 @@
+// Spotify-like Dark Theme Variables
+$bg-primary: #121212;
+$bg-secondary: #181818;
+$bg-tertiary: #282828;
+$bg-elevated: #3E3E3E;
+$accent-green: #1DB954;
+$accent-green-hover: #1ed760;
+$accent-green-light: rgba(29, 185, 84, 0.1);
+$text-primary: #FFFFFF;
+$text-secondary: #B3B3B3;
+$text-muted: #727272;
+$border-color: rgba(255, 255, 255, 0.1);
+$error-color: #E91429;
+$warning-color: #E8A21B;
+$sidebar-width: 240px;
+$topbar-height: 64px;
+$player-height: 90px;
+
+// Reset & Base
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  background-color: $bg-primary;
+  color: $text-primary;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+input,
+textarea {
+  font-family: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+// Scrollbar styling
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.5);
+  }
+}
+
+// Utility classes
+.text-primary { color: $text-primary; }
+.text-secondary { color: $text-secondary; }
+.text-muted { color: $text-muted; }
+.text-accent { color: $accent-green; }
+
+.bg-primary { background: $bg-primary; }
+.bg-secondary { background: $bg-secondary; }
+.bg-tertiary { background: $bg-tertiary; }
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+
+// Button Styles
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem;
+  border-radius: 500px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+
+  &-primary {
+    background: $accent-green;
+    color: #000;
+
+    &:hover {
+      background: $accent-green-hover;
+      transform: scale(1.02);
+    }
+  }
+
+  &-secondary {
+    background: transparent;
+    color: $text-primary;
+    border: 1px solid $text-secondary;
+
+    &:hover {
+      border-color: $text-primary;
+    }
+  }
+
+  &-ghost {
+    background: transparent;
+    color: $text-secondary;
+
+    &:hover {
+      color: $text-primary;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+// Form Styles
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: $text-primary;
+  }
+
+  input,
+  textarea,
+  select {
+    background: $bg-tertiary;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: $text-primary;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+
+    &::placeholder {
+      color: $text-muted;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $text-primary;
+    }
+
+    &.error {
+      border-color: $error-color;
+    }
+  }
+
+  .error-msg {
+    font-size: 0.75rem;
+    color: $error-color;
+  }
+}
+
+// Card
+.card {
+  background: $bg-secondary;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: background 0.2s;
+  cursor: pointer;
+
+  &:hover {
+    background: $bg-tertiary;
+  }
+}
+
+// Loading spinner
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: $accent-green;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// Toast/notification styles
+.toast {
+  position: fixed;
+  bottom: calc($player-height + 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: $bg-tertiary;
+  color: $text-primary;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+// Grid layouts
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.5rem;
+}
+
+// Section header
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: $text-primary;
+  }
+
+  .see-all {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: $text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+
+    &:hover {
+      color: $text-primary;
+    }
+  }
+}
