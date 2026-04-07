@@ -82,9 +82,10 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
-    ).subscribe((event: NavigationEnd) => {
+    ).subscribe((event) => {
+      const navEnd = event as NavigationEnd;
       const authRoutes = ['/login', '/register'];
-      this.isAuthPage = authRoutes.some(r => event.urlAfterRedirects.startsWith(r));
+      this.isAuthPage = authRoutes.some(r => navEnd.urlAfterRedirects.startsWith(r));
     });
   }
 }
