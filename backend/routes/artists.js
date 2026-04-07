@@ -17,6 +17,23 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/artists/search?q= - must be before /:id to avoid route conflict
+router.get('/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || typeof q !== 'string') return res.json([]);
+
+    // Escape special regex characters to prevent regex injection
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const artists = await Artist.find({ name: new RegExp(escaped, 'i') })
+      .select('name image bio followers')
+      .limit(20);
+    res.json(artists);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // GET /api/artists/:id
 router.get('/:id', async (req, res) => {
   try {
@@ -63,23 +80,6 @@ router.post('/', adminAuth, async (req, res) => {
     if (error.name === 'ValidationError') {
       return res.status(400).json({ message: Object.values(error.errors).map(e => e.message).join(', ') });
     }
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// GET /api/artists/search?q=
-router.get('/search', async (req, res) => {
-  try {
-    const { q } = req.query;
-    if (!q || typeof q !== 'string') return res.json([]);
-
-    // Escape special regex characters to prevent regex injection
-    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const artists = await Artist.find({ name: new RegExp(escaped, 'i') })
-      .select('name image bio followers')
-      .limit(20);
-    res.json(artists);
-  } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
 });

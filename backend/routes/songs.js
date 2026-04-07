@@ -221,6 +221,9 @@ router.post('/', adminAuth, upload.fields([
     await artist.save();
 
     if (albumId) {
+      if (typeof albumId !== 'string' || !isValidObjectId(albumId)) {
+        return res.status(400).json({ message: 'Invalid albumId' });
+      }
       const album = await Album.findById(albumId);
       if (album) {
         album.songs.push(song._id);
