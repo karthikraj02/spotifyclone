@@ -121,15 +121,15 @@ import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.com
       justify-content: space-between;
       margin-bottom: 1.5rem;
 
-      h1 { font-size: 2rem; font-weight: 700; color: #fff; }
+      h1 { font-size: 2rem; font-weight: 700; color: var(--text-primary); }
 
       .create-btn {
         width: 36px; height: 36px;
         border-radius: 50%;
         background: transparent;
-        color: #B3B3B3;
+        color: var(--text-secondary);
         display: flex; align-items: center; justify-content: center;
-        &:hover { color: #fff; background: rgba(255,255,255,0.1); }
+        &:hover { color: var(--text-primary); background: var(--border-color); }
       }
     }
 
@@ -142,16 +142,16 @@ import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.com
         padding: 0.5rem 1rem;
         border-radius: 500px;
         background: transparent;
-        color: #B3B3B3;
+        color: var(--text-secondary);
         font-size: 0.875rem;
         font-weight: 700;
-        border: 1px solid #727272;
+        border: 1px solid var(--text-muted);
         transition: all 0.2s;
 
         &.active, &:hover {
-          background: #fff;
+          background: var(--text-primary);
           color: #000;
-          border-color: #fff;
+          border-color: var(--text-primary);
         }
       }
     }
@@ -162,7 +162,7 @@ import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.com
       padding: 3rem;
       .spinner {
         width: 40px; height: 40px;
-        border: 3px solid rgba(255,255,255,0.1);
+        border: 3px solid var(--border-color);
         border-top-color: #1DB954;
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
@@ -175,8 +175,8 @@ import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.com
       text-align: center;
       padding: 4rem 2rem;
       .empty-icon { font-size: 4rem; margin-bottom: 1rem; }
-      h3 { font-size: 1.25rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
-      p { color: #B3B3B3; margin-bottom: 1.5rem; }
+      h3 { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; }
+      p { color: var(--text-secondary); margin-bottom: 1.5rem; }
     }
 
     .btn-primary {
@@ -202,7 +202,7 @@ import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.com
       align-items: flex-end;
       gap: 1.5rem;
       padding: 2rem;
-      background: linear-gradient(to bottom, #4a235a, #121212);
+      background: linear-gradient(to bottom, #4a235a, var(--bg-primary));
       border-radius: 8px;
       margin-bottom: 1.5rem;
 
@@ -217,9 +217,9 @@ import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.com
       }
 
       .liked-info {
-        span { font-size: 0.75rem; color: #fff; text-transform: uppercase; }
-        h2 { font-size: 2rem; font-weight: 700; color: #fff; margin: 0.25rem 0; }
-        p { color: #B3B3B3; font-size: 0.875rem; }
+        span { font-size: 0.75rem; color: var(--text-primary); text-transform: uppercase; }
+        h2 { font-size: 2rem; font-weight: 700; color: var(--text-primary); margin: 0.25rem 0; }
+        p { color: var(--text-secondary); font-size: 0.875rem; }
       }
     }
 
@@ -236,7 +236,7 @@ import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.com
     }
 
     .modal {
-      background: #282828;
+      background: var(--bg-tertiary);
       border-radius: 8px;
       padding: 1.5rem;
       width: 100%;
@@ -247,24 +247,24 @@ import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.com
         align-items: center;
         justify-content: space-between;
         margin-bottom: 1.5rem;
-        h2 { font-size: 1.25rem; font-weight: 700; color: #fff; }
-        .close-btn { background: none; border: none; color: #B3B3B3; cursor: pointer; padding: 0.25rem; &:hover { color: #fff; } }
+        h2 { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); }
+        .close-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 0.25rem; &:hover { color: var(--text-primary); } }
       }
 
       .form-group {
         margin-bottom: 1rem;
-        label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; color: #fff; .optional { color: #B3B3B3; font-weight: 400; } }
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--text-primary); .optional { color: var(--text-secondary); font-weight: 400; } }
         input, textarea {
           width: 100%;
           padding: 0.75rem;
-          background: #3E3E3E;
+          background: var(--bg-elevated);
           border: 1px solid transparent;
           border-radius: 4px;
-          color: #fff;
+          color: var(--text-primary);
           font-size: 0.875rem;
           resize: vertical;
-          &::placeholder { color: #727272; }
-          &:focus { outline: none; border-color: #fff; }
+          &::placeholder { color: var(--text-muted); }
+          &:focus { outline: none; border-color: var(--text-primary); }
         }
       }
 
@@ -277,12 +277,12 @@ import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.com
         .btn-cancel {
           padding: 0.75rem 1.5rem;
           background: transparent;
-          color: #fff;
-          border: 1px solid #727272;
+          color: var(--text-primary);
+          border: 1px solid var(--text-muted);
           border-radius: 500px;
           font-weight: 700;
           cursor: pointer;
-          &:hover { border-color: #fff; }
+          &:hover { border-color: var(--text-primary); }
         }
 
         .btn-create {

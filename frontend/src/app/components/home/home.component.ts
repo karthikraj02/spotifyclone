@@ -107,7 +107,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
   styles: [`
     .home-page {
       padding: 1.5rem 2rem 2rem;
-      background: linear-gradient(180deg, #1a3a2a 0%, #121212 30%);
+      background: linear-gradient(180deg, #1a3a2a 0%, var(--bg-primary) 30%);
       min-height: 100%;
     }
 
@@ -116,7 +116,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       h1 {
         font-size: 2rem;
         font-weight: 700;
-        color: #fff;
+        color: var(--text-primary);
         margin-bottom: 1.5rem;
       }
     }
@@ -131,14 +131,14 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      background: rgba(255,255,255,0.1);
+      background: var(--border-color);
       border-radius: 4px;
       overflow: hidden;
       cursor: pointer;
       transition: background 0.2s;
       position: relative;
       text-decoration: none;
-      color: #fff;
+      color: var(--text-primary);
 
       &:hover {
         background: rgba(255,255,255,0.2);
@@ -192,16 +192,16 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       justify-content: space-between;
       margin-bottom: 1rem;
 
-      h2 { font-size: 1.5rem; font-weight: 700; color: #fff; }
+      h2 { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
 
       .see-all {
         font-size: 0.75rem;
         font-weight: 700;
-        color: #B3B3B3;
+        color: var(--text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.1em;
         text-decoration: none;
-        &:hover { color: #fff; text-decoration: underline; }
+        &:hover { color: var(--text-primary); text-decoration: underline; }
       }
     }
 
@@ -221,7 +221,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
     }
 
     .skeleton-card {
-      background: #282828;
+      background: var(--bg-tertiary);
       border-radius: 8px;
       height: 200px;
       animation: pulse 1.5s ease-in-out infinite;
@@ -233,12 +233,12 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
     }
 
     .empty-state {
-      color: #B3B3B3;
+      color: var(--text-secondary);
       padding: 2rem 0;
     }
 
     .artist-card {
-      background: #181818;
+      background: var(--bg-secondary);
       border-radius: 8px;
       padding: 1rem;
       text-align: center;
@@ -247,7 +247,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       text-decoration: none;
       display: block;
 
-      &:hover { background: #282828; }
+      &:hover { background: var(--bg-tertiary); }
 
       .artist-img-wrapper {
         width: 100%;
@@ -263,7 +263,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       .artist-name {
         font-weight: 700;
         font-size: 0.875rem;
-        color: #fff;
+        color: var(--text-primary);
         margin-bottom: 0.25rem;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -272,7 +272,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
       .artist-label {
         font-size: 0.75rem;
-        color: #B3B3B3;
+        color: var(--text-secondary);
       }
     }
   `]

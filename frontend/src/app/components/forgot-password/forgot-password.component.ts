@@ -57,14 +57,14 @@ import { AuthService } from '../../services/auth.service';
     .auth-page {
       min-height: 100vh;
       display: flex;
-      background: #121212;
+      background: var(--bg-primary);
       padding: 2rem;
       overflow-y: auto;
     }
 
     .auth-card {
       margin: auto;
-      background: #121212;
+      background: var(--bg-primary);
       padding: 2.5rem;
       border-radius: 8px;
       width: 100%;
@@ -77,14 +77,14 @@ import { AuthService } from '../../services/auth.service';
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
-      color: #fff;
+      color: var(--text-primary);
       margin-bottom: 2rem;
       svg { color: #1DB954; }
       span { font-size: 1.5rem; font-weight: 700; }
     }
 
-    h1 { font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
-    .subtitle { color: #b3b3b3; margin-bottom: 2rem; font-size: 0.875rem; }
+    h1 { font-size: 2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; }
+    .subtitle { color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.875rem; }
 
     .alert {
       padding: 0.75rem 1rem;
@@ -107,18 +107,18 @@ import { AuthService } from '../../services/auth.service';
     .form-group {
       text-align: left;
       margin-bottom: 1.5rem;
-      label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; color: #fff; }
+      label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--text-primary); }
       input {
         width: 100%;
         padding: 0.75rem 1rem;
-        background: #3E3E3E;
+        background: var(--bg-elevated);
         border: 1px solid transparent;
         border-radius: 4px;
-        color: #fff;
+        color: var(--text-primary);
         font-size: 1rem;
         transition: border-color 0.2s;
-        &::placeholder { color: #727272; }
-        &:focus { outline: none; border-color: #fff; }
+        &::placeholder { color: var(--text-muted); }
+        &:focus { outline: none; border-color: var(--text-primary); }
         &.error { border-color: #E91429; }
       }
       .error-msg { display: block; margin-top: 0.25rem; font-size: 0.75rem; color: #E91429; }
@@ -158,15 +158,15 @@ import { AuthService } from '../../services/auth.service';
       align-items: center;
       gap: 1rem;
       margin: 2rem 0 1.5rem;
-      color: #727272;
+      color: var(--text-muted);
       font-size: 0.875rem;
-      &::before, &::after { content: ''; flex: 1; height: 1px; background: #282828; }
+      &::before, &::after { content: ''; flex: 1; height: 1px; background: var(--bg-tertiary); }
     }
 
     .switch-link {
-      color: #B3B3B3;
+      color: var(--text-secondary);
       font-size: 0.875rem;
-      a { color: #fff; font-weight: 700; text-decoration: underline; &:hover { color: #1DB954; } }
+      a { color: var(--text-primary); font-weight: 700; text-decoration: underline; &:hover { color: #1DB954; } }
     }
   `]
 })

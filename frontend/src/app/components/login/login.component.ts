@@ -78,14 +78,14 @@ import { AuthService } from '../../services/auth.service';
     .auth-page {
       min-height: 100vh;
       display: flex;
-      background: #121212;
+      background: var(--bg-primary);
       padding: 2rem;
       overflow-y: auto;
     }
 
     .auth-card {
       margin: auto;
-      background: #121212;
+      background: var(--bg-primary);
       padding: 2.5rem;
       border-radius: 8px;
       width: 100%;
@@ -98,7 +98,7 @@ import { AuthService } from '../../services/auth.service';
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
-      color: #fff;
+      color: var(--text-primary);
       margin-bottom: 2rem;
 
       svg { color: #1DB954; }
@@ -108,7 +108,7 @@ import { AuthService } from '../../services/auth.service';
     h1 {
       font-size: 2rem;
       font-weight: 700;
-      color: #fff;
+      color: var(--text-primary);
       margin-bottom: 2rem;
     }
 
@@ -135,21 +135,21 @@ import { AuthService } from '../../services/auth.service';
         margin-bottom: 0.5rem;
         font-size: 0.875rem;
         font-weight: 600;
-        color: #fff;
+        color: var(--text-primary);
       }
 
       input {
         width: 100%;
         padding: 0.75rem 1rem;
-        background: #3E3E3E;
+        background: var(--bg-elevated);
         border: 1px solid transparent;
         border-radius: 4px;
-        color: #fff;
+        color: var(--text-primary);
         font-size: 1rem;
         transition: border-color 0.2s;
 
-        &::placeholder { color: #727272; }
-        &:focus { outline: none; border-color: #fff; }
+        &::placeholder { color: var(--text-muted); }
+        &:focus { outline: none; border-color: var(--text-primary); }
         &.error { border-color: #E91429; }
       }
 
@@ -198,23 +198,23 @@ import { AuthService } from '../../services/auth.service';
       align-items: center;
       gap: 1rem;
       margin: 1.5rem 0;
-      color: #727272;
+      color: var(--text-muted);
       font-size: 0.875rem;
 
       &::before, &::after {
         content: '';
         flex: 1;
         height: 1px;
-        background: #282828;
+        background: var(--bg-tertiary);
       }
     }
 
     .switch-link {
-      color: #B3B3B3;
+      color: var(--text-secondary);
       font-size: 0.875rem;
 
       a {
-        color: #fff;
+        color: var(--text-primary);
         font-weight: 700;
         text-decoration: underline;
         &:hover { color: #1DB954; }
@@ -222,12 +222,12 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .forgot-link {
-      color: #B3B3B3;
+      color: var(--text-secondary);
       font-size: 0.875rem;
       margin-top: 1rem;
       
       a {
-        color: #fff;
+        color: var(--text-primary);
         text-decoration: underline;
         &:hover { color: #1DB954; }
       }

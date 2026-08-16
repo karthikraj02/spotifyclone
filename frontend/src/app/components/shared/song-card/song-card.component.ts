@@ -128,9 +128,9 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       border-radius: 4px;
       cursor: pointer;
       transition: background 0.1s;
-      color: #B3B3B3;
+      color: var(--text-secondary);
 
-      &:hover { background: rgba(255,255,255,0.1); }
+      &:hover { background: var(--border-color); }
       &.active { .song-title { color: #1DB954 !important; } }
 
       @media (max-width: 768px) {
@@ -145,7 +145,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       justify-content: center;
       width: 40px;
 
-      .index-num { font-size: 0.875rem; color: #B3B3B3; }
+      .index-num { font-size: 0.875rem; color: var(--text-secondary); }
 
       .playing-indicator {
         display: flex;
@@ -173,7 +173,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       .icon-btn {
         background: none;
         border: none;
-        color: #fff;
+        color: var(--text-primary);
         cursor: pointer;
         padding: 0.25rem;
         display: flex;
@@ -200,7 +200,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       .song-title {
         font-size: 0.9rem;
         font-weight: 500;
-        color: #fff;
+        color: var(--text-primary);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -209,25 +209,25 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
       .song-artist {
         font-size: 0.75rem;
-        color: #B3B3B3;
+        color: var(--text-secondary);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         text-decoration: none;
-        &:hover { color: #fff; text-decoration: underline; }
+        &:hover { color: var(--text-primary); text-decoration: underline; }
       }
     }
 
     .song-album {
       .album-name {
         font-size: 0.875rem;
-        color: #B3B3B3;
+        color: var(--text-secondary);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         display: block;
         text-decoration: none;
-        &:hover { color: #fff; text-decoration: underline; }
+        &:hover { color: var(--text-primary); text-decoration: underline; }
       }
     }
 
@@ -250,18 +250,18 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       }
 
       .like-btn {
-        color: #B3B3B3;
+        color: var(--text-secondary);
         &.liked { color: #1DB954; opacity: 1 !important; }
-        &:hover { color: #fff; }
+        &:hover { color: var(--text-primary); }
       }
 
-      .add-btn { color: #B3B3B3; &:hover { color: #fff; } }
+      .add-btn { color: var(--text-secondary); &:hover { color: var(--text-primary); } }
 
-      .remove-btn { color: #B3B3B3; &:hover { color: #E91429; } }
+      .remove-btn { color: var(--text-secondary); &:hover { color: #E91429; } }
 
       .duration {
         font-size: 0.875rem;
-        color: #B3B3B3;
+        color: var(--text-secondary);
         min-width: 36px;
         text-align: right;
       }
@@ -275,7 +275,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       position: absolute;
       right: 0;
       top: calc(100% + 4px);
-      background: #282828;
+      background: var(--bg-tertiary);
       border-radius: 4px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       min-width: 180px;
@@ -291,20 +291,20 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       text-align: left;
       background: none;
       border: none;
-      color: #fff;
+      color: var(--text-primary);
       font-size: 0.8125rem;
       padding: 0.5rem 0.75rem;
       cursor: pointer;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      &:hover { background: rgba(255,255,255,0.1); }
+      &:hover { background: var(--border-color); }
     }
 
     .add-menu-empty {
       padding: 0.5rem 0.75rem;
       font-size: 0.75rem;
-      color: #B3B3B3;
+      color: var(--text-secondary);
       max-width: 200px;
       white-space: normal;
     }

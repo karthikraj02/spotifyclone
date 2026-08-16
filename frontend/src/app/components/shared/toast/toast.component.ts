@@ -28,14 +28,14 @@ import { ToastService } from '../../../services/toast.service';
     }
 
     .toast {
-      background: #282828;
-      color: #fff;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
       padding: 0.75rem 1rem;
       border-radius: 6px;
       font-size: 0.875rem;
       box-shadow: 0 4px 16px rgba(0,0,0,0.4);
       cursor: pointer;
-      border-left: 3px solid #B3B3B3;
+      border-left: 3px solid var(--text-secondary);
 
       &.error { border-left-color: #E91429; }
     }

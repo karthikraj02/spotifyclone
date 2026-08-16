@@ -101,7 +101,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
     .search-header {
       margin-bottom: 2rem;
 
-      h1 { font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 1rem; }
+      h1 { font-size: 2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; }
     }
 
     .search-box {
@@ -120,13 +120,13 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       .search-input {
         width: 100%;
         padding: 0.875rem 3rem;
-        background: #fff;
+        background: var(--text-primary);
         border: none;
         border-radius: 500px;
         color: #000;
         font-size: 1rem;
-        &::placeholder { color: #727272; }
-        &:focus { outline: 2px solid #fff; }
+        &::placeholder { color: var(--text-muted); }
+        &:focus { outline: 2px solid var(--text-primary); }
       }
 
       .clear-btn {
@@ -136,7 +136,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
         transform: translateY(-50%);
         background: none;
         border: none;
-        color: #727272;
+        color: var(--text-muted);
         cursor: pointer;
         padding: 0.25rem;
         display: flex;
@@ -150,11 +150,11 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       align-items: center;
       gap: 1rem;
       padding: 4rem 0;
-      color: #B3B3B3;
+      color: var(--text-secondary);
 
       .spinner {
         width: 40px; height: 40px;
-        border: 3px solid rgba(255,255,255,0.1);
+        border: 3px solid var(--border-color);
         border-top-color: #1DB954;
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
@@ -165,8 +165,8 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
     .no-results {
       padding: 3rem 0;
-      h2 { font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
-      p { color: #B3B3B3; }
+      h2 { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; }
+      p { color: var(--text-secondary); }
     }
 
     .results {
@@ -177,7 +177,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       section h2 {
         font-size: 1.25rem;
         font-weight: 700;
-        color: #fff;
+        color: var(--text-primary);
         margin-bottom: 1rem;
       }
     }
@@ -195,7 +195,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
     }
 
     .artist-card {
-      background: #181818;
+      background: var(--bg-secondary);
       border-radius: 8px;
       padding: 1rem;
       text-align: center;
@@ -203,7 +203,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       transition: background 0.2s;
       text-decoration: none;
       display: block;
-      &:hover { background: #282828; }
+      &:hover { background: var(--bg-tertiary); }
 
       .artist-img {
         width: 100%;
@@ -214,12 +214,12 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
         img { width: 100%; height: 100%; object-fit: cover; }
       }
 
-      .name { font-weight: 700; font-size: 0.875rem; color: #fff; margin-bottom: 0.25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .label { font-size: 0.75rem; color: #B3B3B3; }
+      .name { font-weight: 700; font-size: 0.875rem; color: var(--text-primary); margin-bottom: 0.25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .label { font-size: 0.75rem; color: var(--text-secondary); }
     }
 
     .browse-section {
-      h2 { font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 1.5rem; }
+      h2 { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem; }
     }
 
     .genre-grid {
@@ -244,7 +244,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       span {
         font-size: 1.25rem;
         font-weight: 700;
-        color: #fff;
+        color: var(--text-primary);
         text-shadow: 0 1px 4px rgba(0,0,0,0.3);
       }
     }

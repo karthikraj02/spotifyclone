@@ -94,12 +94,12 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
     .loading {
       display: flex; justify-content: center; padding: 4rem;
-      .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #1DB954; border-radius: 50%; animation: spin 0.8s linear infinite; }
+      .spinner { width: 40px; height: 40px; border: 3px solid var(--border-color); border-top-color: #1DB954; border-radius: 50%; animation: spin 0.8s linear infinite; }
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .error-state { text-align: center; padding: 4rem; h2 { color: #fff; } }
+    .error-state { text-align: center; padding: 4rem; h2 { color: var(--text-primary); } }
 
     .artist-hero {
       position: relative;
@@ -124,8 +124,8 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       .hero-info {
         position: relative;
         z-index: 1;
-        .type { font-size: 0.75rem; font-weight: 700; color: #fff; text-transform: uppercase; }
-        h1 { font-size: 4rem; font-weight: 900; color: #fff; margin: 0.25rem 0; }
+        .type { font-size: 0.75rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; }
+        h1 { font-size: 4rem; font-weight: 900; color: var(--text-primary); margin: 0.25rem 0; }
         .followers { color: rgba(255,255,255,0.7); font-size: 0.875rem; }
       }
     }
@@ -150,13 +150,13 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
         padding: 0.5rem 1.25rem;
         border-radius: 500px;
         background: transparent;
-        border: 1px solid #727272;
-        color: #fff;
+        border: 1px solid var(--text-muted);
+        color: var(--text-primary);
         font-weight: 700;
         font-size: 0.875rem;
         cursor: pointer;
         transition: border-color 0.1s;
-        &:hover:not(:disabled) { border-color: #fff; }
+        &:hover:not(:disabled) { border-color: var(--text-primary); }
         &:disabled { opacity: 0.6; cursor: not-allowed; }
         &.following { border-color: #1DB954; color: #1DB954; }
       }
@@ -165,24 +165,24 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
     .bio-section, .songs-section, .albums-section {
       padding: 0 2rem 2rem;
 
-      h2 { font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 1rem; }
+      h2 { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; }
     }
 
-    .bio-section p { color: #B3B3B3; line-height: 1.6; }
+    .bio-section p { color: var(--text-secondary); line-height: 1.6; }
 
     .songs-list { display: flex; flex-direction: column; }
 
     .show-more-btn {
       background: none;
       border: none;
-      color: #B3B3B3;
+      color: var(--text-secondary);
       font-size: 0.875rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.1em;
       cursor: pointer;
       padding: 1rem 1rem;
-      &:hover { color: #fff; }
+      &:hover { color: var(--text-primary); }
     }
 
     .albums-grid {
@@ -192,7 +192,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
     }
 
     .album-card {
-      background: #181818;
+      background: var(--bg-secondary);
       border-radius: 8px;
       padding: 1rem;
       cursor: pointer;
@@ -200,7 +200,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       display: block;
       text-decoration: none;
       color: inherit;
-      &:hover { background: #282828; }
+      &:hover { background: var(--bg-tertiary); }
 
       .album-cover {
         width: 100%;
@@ -211,8 +211,8 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
         img { width: 100%; height: 100%; object-fit: cover; }
       }
 
-      .album-title { font-weight: 700; font-size: 0.875rem; color: #fff; margin-bottom: 0.25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .album-year { font-size: 0.75rem; color: #B3B3B3; }
+      .album-title { font-weight: 700; font-size: 0.875rem; color: var(--text-primary); margin-bottom: 0.25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .album-year { font-size: 0.75rem; color: var(--text-secondary); }
     }
   `]
 })
@@ -220,7 +220,7 @@ export class ArtistComponent implements OnInit {
   artist: ArtistDetail | null = null;
   isLoading = true;
   showAllSongs = false;
-  heroGradient = 'linear-gradient(to bottom, #3d3d3d, #121212)';
+  heroGradient = 'linear-gradient(to bottom, #3d3d3d, var(--bg-primary))';
   isFollowing = false;
   isFollowLoading = false;
 

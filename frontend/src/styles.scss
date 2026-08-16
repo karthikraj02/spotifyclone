@@ -1,15 +1,37 @@
-// Spotify-like Dark Theme Variables
-$bg-primary: #121212;
-$bg-secondary: #181818;
-$bg-tertiary: #282828;
-$bg-elevated: #3E3E3E;
+:root {
+  --bg-primary: #121212;
+  --bg-secondary: #181818;
+  --bg-tertiary: #282828;
+  --bg-elevated: #3E3E3E;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B3B3B3;
+  --text-muted: #727272;
+  --border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='light'] {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F6F6F6;
+  --bg-tertiary: #EBEBEB;
+  --bg-elevated: #E0E0E0;
+  --text-primary: #121212;
+  --text-secondary: #5E5E5E;
+  --text-muted: #727272;
+  --border-color: rgba(0, 0, 0, 0.1);
+}
+
+// Spotify-like Theme Variables (Mapped to CSS Custom Properties)
+$bg-primary: var(--bg-primary);
+$bg-secondary: var(--bg-secondary);
+$bg-tertiary: var(--bg-tertiary);
+$bg-elevated: var(--bg-elevated);
 $accent-green: #1DB954;
 $accent-green-hover: #1ed760;
 $accent-green-light: rgba(29, 185, 84, 0.1);
-$text-primary: #FFFFFF;
-$text-secondary: #B3B3B3;
-$text-muted: #727272;
-$border-color: rgba(255, 255, 255, 0.1);
+$text-primary: var(--text-primary);
+$text-secondary: var(--text-secondary);
+$text-muted: var(--text-muted);
+$border-color: var(--border-color);
 $error-color: #E91429;
 $warning-color: #E8A21B;
 $sidebar-width: 240px;

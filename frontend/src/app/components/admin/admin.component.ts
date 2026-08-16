@@ -306,20 +306,20 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
   styles: [`
     .admin-page { padding: 1.5rem 2rem 2rem; min-height: 100%; }
 
-    h1 { font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 1.5rem; }
+    h1 { font-size: 2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem; }
 
     .tabs {
       display: flex; gap: 0.5rem; margin-bottom: 2rem;
       button {
         padding: 0.5rem 1.5rem;
         border-radius: 4px;
-        background: #282828;
-        color: #B3B3B3;
+        background: var(--bg-tertiary);
+        color: var(--text-secondary);
         border: none;
         font-weight: 600;
         cursor: pointer;
         &.active { background: #1DB954; color: #000; }
-        &:hover:not(.active) { background: #3E3E3E; color: #fff; }
+        &:hover:not(.active) { background: var(--bg-elevated); color: var(--text-primary); }
       }
     }
 
@@ -332,32 +332,32 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       &.error { background: rgba(233,20,41,0.1); color: #E91429; border: 1px solid rgba(233,20,41,0.3); }
     }
 
-    .section h2 { font-size: 1.25rem; font-weight: 700; color: #fff; margin-bottom: 1rem; }
+    .section h2 { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; }
 
     .form-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 1rem;
-      background: #181818;
+      background: var(--bg-secondary);
       padding: 1.5rem;
       border-radius: 8px;
       margin-bottom: 1rem;
 
       .form-group {
-        label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; color: #fff; }
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--text-primary); }
         input, select, textarea {
           width: 100%;
           padding: 0.75rem;
-          background: #282828;
+          background: var(--bg-tertiary);
           border: 1px solid transparent;
           border-radius: 4px;
-          color: #fff;
+          color: var(--text-primary);
           font-size: 0.875rem;
           &:focus { outline: none; border-color: #1DB954; }
           &.disabled { opacity: 0.5; pointer-events: none; }
         }
         textarea { resize: vertical; }
-        .hint { display: block; margin-top: 0.375rem; font-size: 0.75rem; color: #727272; }
+        .hint { display: block; margin-top: 0.375rem; font-size: 0.75rem; color: var(--text-muted); }
       }
 
       .file-url-group {
@@ -371,7 +371,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
           font-size: 0.75rem;
         }
         input[type="url"] { flex: 1; }
-        .or { color: #727272; font-size: 0.75rem; font-weight: 700; }
+        .or { color: var(--text-muted); font-size: 0.75rem; font-weight: 700; }
       }
 
       .form-actions {
@@ -397,14 +397,14 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       .cancel-btn {
         padding: 0.75rem 1.5rem;
         background: transparent;
-        color: #fff;
-        border: 1px solid #727272;
+        color: var(--text-primary);
+        border: 1px solid var(--text-muted);
         border-radius: 500px;
         font-weight: 700;
         cursor: pointer;
         height: fit-content;
         width: fit-content;
-        &:hover { border-color: #fff; }
+        &:hover { border-color: var(--text-primary); }
       }
     }
 
@@ -416,11 +416,11 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       th, td {
         padding: 0.75rem 1rem;
         text-align: left;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
+        border-bottom: 1px solid var(--border-color);
         font-size: 0.875rem;
       }
-      th { color: #B3B3B3; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
-      td { color: #fff; }
+      th { color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
+      td { color: var(--text-primary); }
       tr:hover td { background: rgba(255,255,255,0.05); }
 
       .thumb { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; }
@@ -442,13 +442,13 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       .edit-btn {
         padding: 0.375rem 0.75rem;
         background: transparent;
-        border: 1px solid #727272;
-        color: #fff;
+        border: 1px solid var(--text-muted);
+        color: var(--text-primary);
         border-radius: 4px;
         font-size: 0.75rem;
         font-weight: 600;
         cursor: pointer;
-        &:hover { border-color: #fff; }
+        &:hover { border-color: var(--text-primary); }
       }
 
       .role-btn {
@@ -466,7 +466,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
       .you-badge {
         font-size: 0.75rem;
-        color: #727272;
+        color: var(--text-muted);
         font-style: italic;
       }
 
@@ -475,14 +475,14 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
         border-radius: 4px;
         font-size: 0.75rem;
         font-weight: 700;
-        background: rgba(255,255,255,0.1);
+        background: var(--border-color);
         &.admin { background: rgba(29,185,84,0.2); color: #1DB954; }
       }
     }
 
     .loading {
       display: flex; justify-content: center; padding: 2rem;
-      .spinner { width: 32px; height: 32px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #1DB954; border-radius: 50%; animation: spin 0.8s linear infinite; }
+      .spinner { width: 32px; height: 32px; border: 2px solid var(--border-color); border-top-color: #1DB954; border-radius: 50%; animation: spin 0.8s linear infinite; }
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }

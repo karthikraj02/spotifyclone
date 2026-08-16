@@ -102,8 +102,8 @@ import { AuthService } from '../../services/auth.service';
         align-items: center;
         gap: 0.5rem;
         text-decoration: none;
-        color: #fff;
-        svg { color: #fff; }
+        color: var(--text-primary);
+        svg { color: var(--text-primary); }
         span { font-size: 1.25rem; font-weight: 700; }
       }
     }
@@ -121,14 +121,14 @@ import { AuthService } from '../../services/auth.service';
         gap: 1rem;
         padding: 0.625rem 1rem;
         border-radius: 4px;
-        color: #B3B3B3;
+        color: var(--text-secondary);
         text-decoration: none;
         font-size: 0.875rem;
         font-weight: 600;
         transition: color 0.1s;
 
-        &:hover { color: #fff; }
-        &.active { color: #fff; }
+        &:hover { color: var(--text-primary); }
+        &.active { color: var(--text-primary); }
       }
     }
 
@@ -145,17 +145,17 @@ import { AuthService } from '../../services/auth.service';
         justify-content: space-between;
         padding: 0 1rem 0.75rem;
 
-        span { font-size: 0.875rem; font-weight: 700; color: #B3B3B3; text-transform: uppercase; letter-spacing: 0.1em; }
+        span { font-size: 0.875rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.1em; }
 
         .add-btn {
           background: none;
           border: none;
-          color: #B3B3B3;
+          color: var(--text-secondary);
           cursor: pointer;
           padding: 0.25rem;
           display: flex;
           border-radius: 50%;
-          &:hover { color: #fff; background: rgba(255,255,255,0.1); }
+          &:hover { color: var(--text-primary); background: var(--border-color); }
         }
       }
 
@@ -169,7 +169,7 @@ import { AuthService } from '../../services/auth.service';
           .playlist-link {
             display: block;
             padding: 0.5rem 1rem;
-            color: #B3B3B3;
+            color: var(--text-secondary);
             text-decoration: none;
             font-size: 0.875rem;
             overflow: hidden;
@@ -177,14 +177,14 @@ import { AuthService } from '../../services/auth.service';
             white-space: nowrap;
             border-radius: 4px;
             transition: color 0.1s;
-            &:hover { color: #fff; }
-            &.active { color: #fff; }
+            &:hover { color: var(--text-primary); }
+            &.active { color: var(--text-primary); }
           }
         }
 
         .skeleton {
           height: 20px;
-          background: #282828;
+          background: var(--bg-tertiary);
           border-radius: 4px;
           margin: 0.5rem 1rem;
           animation: pulse 1.5s ease-in-out infinite;

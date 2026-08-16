@@ -33,14 +33,14 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
       .card-link {
         display: block;
-        background: #181818;
+        background: var(--bg-secondary);
         border-radius: 8px;
         padding: 1rem;
         cursor: pointer;
         transition: background 0.2s;
         text-decoration: none;
         color: inherit;
-        &:hover { background: #282828; }
+        &:hover { background: var(--bg-tertiary); }
       }
 
       .cover-wrapper {
@@ -80,7 +80,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       .name {
         font-weight: 700;
         font-size: 0.875rem;
-        color: #fff;
+        color: var(--text-primary);
         margin-bottom: 0.25rem;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -89,7 +89,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
       .meta {
         font-size: 0.75rem;
-        color: #B3B3B3;
+        color: var(--text-secondary);
       }
     }
   `]

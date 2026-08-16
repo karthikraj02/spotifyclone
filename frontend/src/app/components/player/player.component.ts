@@ -63,11 +63,11 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
             @if (isLoading) {
               <div class="loading-ring"></div>
             } @else if (isPlaying) {
-              <svg viewBox="0 0 24 24" fill="#000" width="22" height="22">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
                 <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
               </svg>
             } @else {
-              <svg viewBox="0 0 24 24" fill="#000" width="22" height="22" style="margin-left: 2px;">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="margin-left: 2px;">
                 <path d="M8 5v14l11-7z"/>
               </svg>
             }
@@ -135,8 +135,8 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
   `,
   styles: [`
     .player-bar {
-      background: #181818;
-      border-top: 1px solid rgba(255,255,255,0.1);
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
       height: 90px;
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
@@ -167,7 +167,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
         .song-title {
           font-size: 0.875rem;
           font-weight: 500;
-          color: #fff;
+          color: var(--text-primary);
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -176,13 +176,13 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
         .song-artist {
           font-size: 0.75rem;
-          color: #B3B3B3;
+          color: var(--text-secondary);
           text-decoration: none;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
           display: block;
-          &:hover { color: #fff; text-decoration: underline; }
+          &:hover { color: var(--text-primary); text-decoration: underline; }
         }
       }
     }
@@ -190,7 +190,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
     .player-icon-btn {
       background: none;
       border: none;
-      color: #B3B3B3;
+      color: var(--text-secondary);
       cursor: pointer;
       padding: 0.375rem;
       display: flex;
@@ -198,7 +198,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       justify-content: center;
       border-radius: 50%;
       transition: color 0.1s;
-      &:hover { color: #fff; }
+      &:hover { color: var(--text-primary); }
       &.active { color: #1DB954; }
       &.liked { color: #1DB954; }
     }
@@ -220,16 +220,16 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      background: #fff;
+      background: var(--text-primary);
       border: none;
-      color: #000;
+      color: var(--bg-primary);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       transition: transform 0.1s, background 0.1s;
       flex-shrink: 0;
-      &:hover { transform: scale(1.05); background: #f0f0f0; }
+      &:hover { transform: scale(1.05); }
       &:disabled { opacity: 0.7; cursor: not-allowed; }
     }
 
@@ -237,7 +237,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       width: 18px;
       height: 18px;
       border: 2px solid rgba(0,0,0,0.3);
-      border-top-color: #000;
+      border-top-color: var(--bg-primary);
       border-radius: 50%;
       animation: spin 0.6s linear infinite;
     }
@@ -253,7 +253,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
       .time {
         font-size: 0.6875rem;
-        color: #B3B3B3;
+        color: var(--text-secondary);
         min-width: 32px;
         text-align: center;
       }
@@ -274,7 +274,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
       .progress-filled {
         height: 100%;
-        background: #b3b3b3;
+        background: var(--text-secondary);
         border-radius: 2px;
         position: relative;
         transition: background 0.1s;
@@ -283,7 +283,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
           width: 12px;
           height: 12px;
           border-radius: 50%;
-          background: #fff;
+          background: var(--text-primary);
           position: absolute;
           right: -6px;
           top: 50%;
@@ -316,7 +316,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
       .volume-filled {
         height: 100%;
-        background: #b3b3b3;
+        background: var(--text-secondary);
         border-radius: 2px;
         position: relative;
         transition: background 0.1s;
@@ -326,7 +326,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
           width: 12px;
           height: 12px;
           border-radius: 50%;
-          background: #fff;
+          background: var(--text-primary);
           position: absolute;
           right: -6px;
           top: 50%;

@@ -7,6 +7,8 @@ import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { TopbarComponent } from './components/topbar/topbar.component';
 import { PlayerComponent } from './components/player/player.component';
 import { ToastComponent } from './components/shared/toast/toast.component';
+import { ThemeService } from './services/theme.service';
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -37,7 +39,7 @@ import { ToastComponent } from './components/shared/toast/toast.component';
         "sidebar main"
         "player player";
       height: 100vh;
-      background: #121212;
+      background: var(--bg-primary);
       overflow: hidden;
 
       &.auth-layout {
@@ -80,16 +82,17 @@ export class AppComponent implements OnInit {
   isAuthPage = false;
   private destroyRef = inject(DestroyRef);
 
-  constructor(private router: Router) {}
-
-  ngOnInit(): void {
+  constructor(
+    private router: Router,
+    private themeService: ThemeService
+  ) {
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd),
-      takeUntilDestroyed(this.destroyRef)
+      takeUntilDestroyed()
     ).subscribe((event: any) => {
-      const navEnd = event as NavigationEnd;
-      const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
-      this.isAuthPage = authRoutes.some(r => navEnd.urlAfterRedirects.startsWith(r));
+      this.isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password'].some(path => event.urlAfterRedirects.includes(path));
     });
   }
+
+  ngOnInit() {}
 }
