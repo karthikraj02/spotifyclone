@@ -128,6 +128,64 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
+// POST /api/auth/resend-otp
+router.post('/resend-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: 'User is already verified' });
+    }
+
+    // Rate limit: don't allow resend if the last OTP was sent less than 60 seconds ago
+    if (user.otpExpires && (user.otpExpires - Date.now()) > 9 * 60 * 1000) {
+      return res.status(429).json({ success: false, message: 'Please wait before requesting a new code' });
+    }
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save({ validateBeforeSave: false });
+
+    const html = `
+      <h1>Verify Your Email</h1>
+      <p>Hello ${user.username},</p>
+      <p>Here is your new verification code:</p>
+      <h2 style="background: #f4f4f4; padding: 10px; display: inline-block; letter-spacing: 2px;">${otp}</h2>
+      <p>This code will expire in 10 minutes.</p>
+    `;
+
+    const emailSent = await sendEmail({
+      to: email,
+      subject: 'Verify your Spotify Clone Account',
+      html
+    });
+
+    if (!emailSent) {
+      console.warn('Failed to resend OTP email. Ensure SMTP is configured.');
+    }
+
+    res.json({
+      success: true,
+      message: 'A new verification code has been sent to your email.'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error while resending OTP' });
+  }
+});
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {

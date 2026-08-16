@@ -93,6 +93,10 @@ export class AuthService {
     );
   }
 
+  resendOtp(email: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<{ success: boolean; message: string }>(`${this.API}/resend-otp`, { email });
+  }
+
   getMe(): Observable<User> {
     return this.http.get<User>(`${this.API}/me`).pipe(
       tap(user => {

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
@@ -27,6 +27,9 @@ import { AuthService } from '../../services/auth.service';
         @if (errorMsg) {
           <div class="alert alert-error">{{ errorMsg }}</div>
         }
+        @if (successMsg) {
+          <div class="alert alert-success">{{ successMsg }}</div>
+        }
 
         <form [formGroup]="verifyForm" (ngSubmit)="onSubmit()">
           <div class="form-group">
@@ -49,15 +52,32 @@ import { AuthService } from '../../services/auth.service';
             @if (isLoading) {
               <span class="spinner-sm"></span>
             } @else {
-              Verify
+              Verify & Continue
             }
           </button>
         </form>
 
+        <div class="resend-section">
+          <p class="resend-text">Didn't receive the code?</p>
+          <button
+            class="resend-btn"
+            [disabled]="resendCooldown > 0 || isResending"
+            (click)="resendOtp()"
+          >
+            @if (isResending) {
+              <span class="spinner-sm"></span> Sending...
+            } @else if (resendCooldown > 0) {
+              Resend code in {{ resendCooldown }}s
+            } @else {
+              Resend code
+            }
+          </button>
+        </div>
+
         <div class="divider"><span>or</span></div>
 
         <p class="switch-link">
-          <a routerLink="/login">Back to log in</a>
+          <a routerLink="/register">Back to sign up</a>
         </p>
       </div>
     </div>
@@ -125,6 +145,12 @@ import { AuthService } from '../../services/auth.service';
         color: #E91429;
         border: 1px solid rgba(233, 20, 41, 0.3);
       }
+
+      &.alert-success {
+        background: rgba(29, 185, 84, 0.1);
+        color: #1DB954;
+        border: 1px solid rgba(29, 185, 84, 0.3);
+      }
     }
 
     .form-group {
@@ -146,11 +172,12 @@ import { AuthService } from '../../services/auth.service';
         border: 1px solid transparent;
         border-radius: 4px;
         color: var(--text-primary);
-        font-size: 1rem;
-        letter-spacing: 0.25em;
+        font-size: 1.25rem;
+        letter-spacing: 0.35em;
+        text-align: center;
         transition: border-color 0.2s;
 
-        &::placeholder { color: var(--text-muted); letter-spacing: normal; }
+        &::placeholder { color: var(--text-muted); letter-spacing: normal; font-size: 1rem; }
         &:focus { outline: none; border-color: var(--text-primary); }
         &.error { border-color: #E91429; }
       }
@@ -184,6 +211,47 @@ import { AuthService } from '../../services/auth.service';
       &:disabled { opacity: 0.6; cursor: not-allowed; }
     }
 
+    .resend-section {
+      margin-top: 1.5rem;
+      text-align: center;
+
+      .resend-text {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .resend-btn {
+        background: transparent;
+        border: 1px solid var(--text-muted);
+        color: var(--text-primary);
+        padding: 0.5rem 1.5rem;
+        border-radius: 500px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        &:hover:not(:disabled) {
+          border-color: var(--text-primary);
+          background: rgba(255, 255, 255, 0.05);
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .spinner-sm {
+          width: 14px;
+          height: 14px;
+        }
+      }
+    }
+
     .spinner-sm {
       width: 20px;
       height: 20px;
@@ -191,6 +259,11 @@ import { AuthService } from '../../services/auth.service';
       border-top-color: #000;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
+    }
+
+    .resend-btn .spinner-sm {
+      border-color: rgba(255,255,255,0.3);
+      border-top-color: var(--text-primary);
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -224,11 +297,15 @@ import { AuthService } from '../../services/auth.service';
     }
   `]
 })
-export class VerifyOtpComponent {
+export class VerifyOtpComponent implements OnDestroy {
   verifyForm: FormGroup;
   isLoading = false;
+  isResending = false;
   errorMsg = '';
+  successMsg = '';
   email = '';
+  resendCooldown = 0;
+  private cooldownInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -243,15 +320,25 @@ export class VerifyOtpComponent {
     this.route.queryParams.subscribe(params => {
       this.email = params['email'] || '';
       if (!this.email) {
-        this.router.navigate(['/login']);
+        this.router.navigate(['/register']);
       }
     });
+
+    // Start with a 60s cooldown since an OTP was just sent during registration
+    this.startCooldown();
   }
 
-  onSubmit() {
+  ngOnDestroy(): void {
+    if (this.cooldownInterval) {
+      clearInterval(this.cooldownInterval);
+    }
+  }
+
+  onSubmit(): void {
     if (this.verifyForm.valid && this.email) {
       this.isLoading = true;
       this.errorMsg = '';
+      this.successMsg = '';
       const otp = this.verifyForm.get('otp')?.value;
 
       this.authService.verifyOtp(this.email, otp).subscribe({
@@ -264,5 +351,42 @@ export class VerifyOtpComponent {
         }
       });
     }
+  }
+
+  resendOtp(): void {
+    if (this.resendCooldown > 0 || this.isResending || !this.email) return;
+
+    this.isResending = true;
+    this.errorMsg = '';
+    this.successMsg = '';
+
+    this.authService.resendOtp(this.email).subscribe({
+      next: (res) => {
+        this.isResending = false;
+        this.successMsg = res.message || 'A new code has been sent to your email.';
+        this.startCooldown();
+      },
+      error: (err) => {
+        this.isResending = false;
+        this.errorMsg = err.error?.message || 'Failed to resend code. Please try again.';
+      }
+    });
+  }
+
+  private startCooldown(): void {
+    this.resendCooldown = 60;
+    if (this.cooldownInterval) {
+      clearInterval(this.cooldownInterval);
+    }
+    this.cooldownInterval = setInterval(() => {
+      this.resendCooldown--;
+      if (this.resendCooldown <= 0) {
+        this.resendCooldown = 0;
+        if (this.cooldownInterval) {
+          clearInterval(this.cooldownInterval);
+          this.cooldownInterval = null;
+        }
+      }
+    }, 1000);
   }
 }
