@@ -53,8 +53,7 @@ import { AuthService } from '../../services/auth.service';
         </div>
       </div>
     </div>
-  `,
-  styleUrls: ['../login/login.component.scss'] // reuse auth styles
+  `
 })
 export class VerifyOtpComponent {
   verifyForm: FormGroup;

@@ -12,6 +12,9 @@ export interface User {
   avatar: string | null;
   createdAt: string;
   likedSongs?: string[];
+  lastActiveAt?: string;
+  device?: string;
+  totalListenTime?: number;
 }
 
 export interface AuthResponse {
