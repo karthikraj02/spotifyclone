@@ -80,8 +80,12 @@ export class AuthService {
     );
   }
 
-  register(username: string, email: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.API}/register`, { username, email, password }).pipe(
+  register(username: string, email: string, password: string): Observable<any> {
+    return this.http.post<any>(`${this.API}/register`, { username, email, password });
+  }
+
+  verifyOtp(email: string, otp: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.API}/verify-otp`, { email, otp }).pipe(
       tap(res => this.storeSession(res))
     );
   }

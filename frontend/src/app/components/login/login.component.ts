@@ -276,7 +276,11 @@ export class LoginComponent {
       },
       error: (err) => {
         this.isLoading = false;
-        this.errorMessage = err.error?.message || 'Login failed. Please try again.';
+        if (err.error?.needsVerification) {
+          this.router.navigate(['/verify-otp'], { queryParams: { email } });
+        } else {
+          this.errorMessage = err.error?.message || 'Login failed. Please try again.';
+        }
       }
     });
   }

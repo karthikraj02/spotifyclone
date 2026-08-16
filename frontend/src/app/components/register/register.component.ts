@@ -232,8 +232,9 @@ export class RegisterComponent {
     const { username, email, password } = this.registerForm.value;
 
     this.authService.register(username, email, password).subscribe({
-      next: () => {
-        this.router.navigate(['/home']);
+      next: (response) => {
+        this.successMessage = response.message || 'Registration successful! Redirecting to verification...';
+        setTimeout(() => this.router.navigate(['/verify-otp'], { queryParams: { email: response.email || email } }), 1500);
       },
       error: (err) => {
         this.isLoading = false;

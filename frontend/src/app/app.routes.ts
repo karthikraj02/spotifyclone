@@ -21,6 +21,10 @@ export const routes: Routes = [
     loadComponent: () => import('./components/reset-password/reset-password.component').then(m => m.ResetPasswordComponent)
   },
   {
+    path: 'verify-otp',
+    loadComponent: () => import('./components/verify-otp/verify-otp.component').then(m => m.VerifyOtpComponent)
+  },
+  {
     path: 'home',
     loadComponent: () => import('./components/home/home.component').then(m => m.HomeComponent),
     canActivate: [authGuard]

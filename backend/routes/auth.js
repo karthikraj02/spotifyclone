@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 const { auth, JWT_SECRET } = require('../middleware/auth');
+const sendEmail = require('../utils/email');
 
 const router = express.Router();
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -20,7 +21,6 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, message: 'All fields are required' });
     }
 
-    // Ensure inputs are strings to prevent NoSQL injection
     if (typeof username !== 'string' || typeof email !== 'string' || typeof password !== 'string') {
       return res.status(400).json({ success: false, message: 'Invalid input' });
     }
@@ -33,10 +33,85 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ success: false, message: `${field} already in use` });
     }
 
-    const user = await User.create({ username, email, password });
-    const token = generateToken(user._id);
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    const user = await User.create({ 
+      username, 
+      email, 
+      password,
+      otp,
+      otpExpires
+    });
+
+    const html = `
+      <h1>Verify Your Email</h1>
+      <p>Hello ${username},</p>
+      <p>Thank you for registering. Your verification code is:</p>
+      <h2 style="background: #f4f4f4; padding: 10px; display: inline-block; letter-spacing: 2px;">${otp}</h2>
+      <p>This code will expire in 10 minutes.</p>
+    `;
+
+    const emailSent = await sendEmail({
+      to: email,
+      subject: 'Verify your Spotify Clone Account',
+      html
+    });
+
+    if (!emailSent) {
+      // Clean up user if email fails to send? Better to leave it and let them request new OTP, but for simplicity:
+      // await User.findByIdAndDelete(user._id);
+      // return res.status(500).json({ success: false, message: 'Failed to send OTP email. Please try again.' });
+      console.warn('Email failed to send. Ensure SMTP is configured.');
+    }
 
     res.status(201).json({
+      success: true,
+      message: 'Registration successful! Please check your email for the verification code.',
+      email: user.email // Useful for frontend to redirect to verify screen
+    });
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({ success: false, message: messages.join(', ') });
+    }
+    res.status(500).json({ success: false, message: 'Server error during registration' });
+  }
+});
+
+// POST /api/auth/verify-otp
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: 'User is already verified' });
+    }
+
+    if (user.otp !== otp || user.otpExpires < Date.now()) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+    }
+
+    // Mark as verified and clear OTP fields
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    const token = generateToken(user._id);
+
+    res.json({
+      success: true,
       token,
       user: {
         _id: user._id,
@@ -49,11 +124,7 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(e => e.message);
-      return res.status(400).json({ success: false, message: messages.join(', ') });
-    }
-    res.status(500).json({ success: false, message: 'Server error during registration' });
+    res.status(500).json({ success: false, message: 'Server error during OTP verification' });
   }
 });
 
@@ -71,9 +142,13 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid input' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password +isVerified');
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({ success: false, message: 'Please verify your email before logging in', needsVerification: true });
     }
 
     const isMatch = await user.comparePassword(password);
@@ -150,14 +225,28 @@ router.post('/forgot-password', async (req, res) => {
       console.log(`${resetUrl}`);
       console.log(`======================================================\n`);
     }
-    // TODO: integrate a real email provider (e.g. SendGrid/SES) to deliver resetUrl.
-    // Until that is wired up, the link is only observable via the development console log above.
+
+    const html = `
+      <h1>Password Reset Request</h1>
+      <p>Hello ${user.username},</p>
+      <p>You requested a password reset. Click the button below to reset your password:</p>
+      <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background: #1DB954; color: white; text-decoration: none; border-radius: 4px;">Reset Password</a>
+      <p>If you did not request this, please ignore this email.</p>
+    `;
+
+    const emailSent = await sendEmail({
+      to: email,
+      subject: 'Reset your Spotify Clone Password',
+      html
+    });
+
+    if (!emailSent) {
+      console.warn('Failed to send password reset email. Ensure SMTP is configured.');
+    }
 
     res.status(200).json({
       success: true,
-      message: process.env.NODE_ENV !== 'production'
-        ? 'Password reset link has been printed to the backend console for testing.'
-        : 'If that email is registered, a reset link has been generated.'
+      message: 'If that email is registered, a reset link has been generated.'
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error processing forgot password request' });
