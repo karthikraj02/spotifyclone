@@ -63,11 +63,11 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
             @if (isLoading) {
               <div class="loading-ring"></div>
             } @else if (isPlaying) {
-              <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+              <svg viewBox="0 0 24 24" fill="#000" width="22" height="22">
                 <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
               </svg>
             } @else {
-              <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+              <svg viewBox="0 0 24 24" fill="#000" width="22" height="22" style="margin-left: 2px;">
                 <path d="M8 5v14l11-7z"/>
               </svg>
             }
