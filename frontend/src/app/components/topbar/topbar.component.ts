@@ -1,4 +1,4 @@
-import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -13,17 +13,24 @@ import { ThemeService, Theme } from '../../services/theme.service';
   imports: [CommonModule, RouterLink, AssetUrlPipe],
   template: `
     <header class="topbar">
-      <div class="nav-arrows">
-        <button class="nav-btn" (click)="goBack()" title="Go back">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+      <div class="left-section">
+        <button class="menu-toggle-btn" (click)="onMenuToggle()" title="Menu">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
           </svg>
         </button>
-        <button class="nav-btn" (click)="goForward()" title="Go forward">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-            <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
-          </svg>
-        </button>
+        <div class="nav-arrows">
+          <button class="nav-btn" (click)="goBack()" title="Go back">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            </svg>
+          </button>
+          <button class="nav-btn" (click)="goForward()" title="Go forward">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="right-section">
@@ -82,9 +89,39 @@ import { ThemeService, Theme } from '../../services/theme.service';
       backdrop-filter: blur(10px);
     }
 
+    .left-section {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .menu-toggle-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 50%;
+      
+      &:hover {
+        background: var(--bg-elevated);
+      }
+
+      @media (max-width: 768px) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+
     .nav-arrows {
       display: flex;
       gap: 0.5rem;
+
+      @media (max-width: 768px) {
+        display: none;
+      }
 
       .nav-btn {
         width: 32px;
@@ -201,6 +238,8 @@ import { ThemeService, Theme } from '../../services/theme.service';
   `]
 })
 export class TopbarComponent implements OnInit {
+  @Output() menuToggled = new EventEmitter<void>();
+  
   user: User | null = null;
   menuOpen = false;
   currentTheme: Theme = 'dark';
@@ -221,6 +260,10 @@ export class TopbarComponent implements OnInit {
     this.themeService.theme$.pipe(
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(theme => { this.currentTheme = theme; });
+  }
+
+  onMenuToggle(): void {
+    this.menuToggled.emit();
   }
 
   toggleTheme(): void {

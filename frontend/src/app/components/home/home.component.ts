@@ -138,6 +138,10 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       padding: 1.5rem 2rem 2rem;
       background: linear-gradient(180deg, var(--hero-gradient-start) 0%, var(--bg-primary) 30%);
       min-height: 100%;
+      
+      @media (max-width: 768px) {
+        padding: 1rem 1rem 6rem; /* Extra bottom padding for player */
+      }
     }
 
     .greeting-section {
@@ -147,6 +151,10 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
         font-weight: 700;
         color: var(--text-primary);
         margin-bottom: 1.5rem;
+        
+        @media (max-width: 768px) {
+          font-size: 1.5rem;
+        }
       }
     }
 
@@ -154,6 +162,10 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
       gap: 0.5rem;
+      
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr 1fr;
+      }
     }
 
     .quick-pick-item {
@@ -239,6 +251,11 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
       gap: 1rem;
+      
+      @media (max-width: 768px) {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 0.75rem;
+      }
     }
 
     .trending-card {
@@ -347,10 +364,24 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
     .cards-grid, .artists-grid {
       display: grid;
       gap: 1rem;
+      
+      @media (max-width: 768px) {
+        gap: 0.75rem;
+      }
     }
 
-    .cards-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
-    .artists-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .cards-grid { 
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+      @media (max-width: 768px) {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      }
+    }
+    .artists-grid { 
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+      @media (max-width: 768px) {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      }
+    }
 
     .loading-row {
       display: grid;

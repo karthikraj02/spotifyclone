@@ -16,9 +16,10 @@ import { ThemeService } from './services/theme.service';
   template: `
     <div class="app-container" [class.auth-layout]="isAuthPage">
       @if (!isAuthPage) {
-        <app-sidebar class="sidebar"></app-sidebar>
+        <div class="mobile-overlay" [class.active]="isSidebarOpen" (click)="toggleSidebar()"></div>
+        <app-sidebar class="sidebar" [class.open]="isSidebarOpen"></app-sidebar>
         <div class="main-wrapper">
-          <app-topbar class="topbar"></app-topbar>
+          <app-topbar class="topbar" (menuToggled)="toggleSidebar()"></app-topbar>
           <main class="main-content">
             <router-outlet></router-outlet>
           </main>
@@ -47,11 +48,48 @@ import { ThemeService } from './services/theme.service';
         height: 100vh;
         overflow-y: auto;
       }
+
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "main"
+          "player";
+      }
+    }
+
+    .mobile-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 250;
+      opacity: 0;
+      transition: opacity 0.3s;
+      
+      &.active {
+        display: block;
+        opacity: 1;
+      }
     }
 
     .sidebar {
       grid-area: sidebar;
       overflow-y: auto;
+      
+      @media (max-width: 768px) {
+        position: fixed;
+        left: -240px;
+        top: 0;
+        bottom: 90px; /* Leave space for player if player is always visible */
+        width: 240px;
+        z-index: 300;
+        transition: transform 0.3s ease;
+        background: var(--bg-primary); /* Ensure it's opaque */
+        
+        &.open {
+          transform: translateX(240px);
+        }
+      }
     }
 
     .main-wrapper {
@@ -75,11 +113,19 @@ import { ThemeService } from './services/theme.service';
     .player-bar {
       grid-area: player;
       z-index: 200;
+      
+      @media (max-width: 768px) {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+      }
     }
   `]
 })
 export class AppComponent implements OnInit {
   isAuthPage = false;
+  isSidebarOpen = false;
   private destroyRef = inject(DestroyRef);
 
   constructor(
@@ -91,8 +137,13 @@ export class AppComponent implements OnInit {
       takeUntilDestroyed()
     ).subscribe((event: any) => {
       this.isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password'].some(path => event.urlAfterRedirects.includes(path));
+      this.isSidebarOpen = false; // Close sidebar on navigation
     });
   }
 
   ngOnInit() {}
+
+  toggleSidebar(): void {
+    this.isSidebarOpen = !this.isSidebarOpen;
+  }
 }
