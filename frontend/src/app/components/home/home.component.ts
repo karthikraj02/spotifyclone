@@ -6,14 +6,13 @@ import { PlaylistService, Playlist } from '../../services/playlist.service';
 import { ArtistService, ArtistListItem } from '../../services/artist.service';
 import { PlayerService } from '../../services/player.service';
 import { AuthService } from '../../services/auth.service';
-import { SongCardComponent } from '../shared/song-card/song-card.component';
 import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.component';
 import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink, SongCardComponent, PlaylistCardComponent, AssetUrlPipe],
+  imports: [CommonModule, RouterLink, PlaylistCardComponent, AssetUrlPipe],
   template: `
     <div class="home-page">
       <div class="greeting-section">
@@ -46,9 +45,39 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
             }
           </div>
         } @else {
-          <div class="songs-grid">
-            @for (song of trendingSongs; track song._id) {
-              <app-song-card [song]="song" [songs]="trendingSongs" />
+          <div class="trending-grid">
+            @for (song of trendingSongs; track song._id; let idx = $index) {
+              <div
+                class="trending-card"
+                [class.active]="currentSongId === song._id"
+                (click)="playSong(song)"
+                (mouseenter)="hoveredSongId = song._id"
+                (mouseleave)="hoveredSongId = ''"
+              >
+                <div class="trending-cover">
+                  <img [src]="song.coverUrl | assetUrl" [alt]="song.title" />
+                  <div class="trending-overlay">
+                    <button class="trending-play-btn" (click)="playSong(song); $event.stopPropagation()">
+                      @if (currentSongId === song._id && isPlaying) {
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        </svg>
+                      } @else {
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                      }
+                    </button>
+                  </div>
+                  <span class="trending-rank">#{{ idx + 1 }}</span>
+                </div>
+                <div class="trending-info">
+                  <p class="trending-title" [class.accent]="currentSongId === song._id">{{ song.title }}</p>
+                  <a [routerLink]="['/artist', song.artist._id]" class="trending-artist" (click)="$event.stopPropagation()">
+                    {{ song.artist.name }}
+                  </a>
+                </div>
+              </div>
             }
           </div>
         }
@@ -205,12 +234,121 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       }
     }
 
-    .songs-grid, .cards-grid, .artists-grid {
+    /* Trending cards grid */
+    .trending-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 1rem;
+    }
+
+    .trending-card {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 0.75rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      position: relative;
+
+      &:hover {
+        background: var(--bg-tertiary);
+        .trending-overlay { opacity: 1; }
+        .trending-play-btn { transform: translateY(0); opacity: 1; }
+      }
+    }
+
+    .trending-cover {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .trending-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.3);
+        display: flex;
+        align-items: flex-end;
+        justify-content: flex-end;
+        padding: 0.5rem;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+
+      .trending-play-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: #1DB954;
+        color: #000;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        transform: translateY(8px);
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s, background 0.15s;
+
+        &:hover { background: #1ed760; transform: scale(1.05) translateY(0); }
+      }
+
+      .trending-rank {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        background: rgba(0,0,0,0.65);
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+        backdrop-filter: blur(4px);
+      }
+    }
+
+    .trending-info {
+      overflow: hidden;
+
+      .trending-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        margin-bottom: 0.2rem;
+
+        &.accent { color: #1DB954; }
+      }
+
+      .trending-artist {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-decoration: none;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: block;
+
+        &:hover { color: var(--text-primary); text-decoration: underline; }
+      }
+    }
+
+    .cards-grid, .artists-grid {
       display: grid;
       gap: 1rem;
     }
 
-    .songs-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
     .cards-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
     .artists-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 
@@ -287,6 +425,9 @@ export class HomeComponent implements OnInit {
   isLoadingArtists = true;
   timeOfDay = 'day';
   username = '';
+  currentSongId = '';
+  isPlaying = false;
+  hoveredSongId = '';
 
   constructor(
     private songService: SongService,
@@ -319,6 +460,16 @@ export class HomeComponent implements OnInit {
       next: artists => { this.artists = artists; this.isLoadingArtists = false; },
       error: () => { this.isLoadingArtists = false; }
     });
+
+    // Track current song for active state
+    this.playerService.currentIndex$.subscribe(() => {
+      this.currentSongId = this.playerService.currentSong?._id || '';
+    });
+    this.playerService.isPlaying$.subscribe(p => this.isPlaying = p);
+  }
+
+  playSong(song: Song): void {
+    this.playerService.playSong(song, this.trendingSongs);
   }
 
   playPlaylist(playlist: Playlist, event: Event): void {

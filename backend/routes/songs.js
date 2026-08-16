@@ -128,13 +128,68 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/songs/trending
+// Trending score = (plays + 2*likes) * recency_decay
+// recency_decay = 2^(-age_in_days / 7) — halves every 7 days
 router.get('/trending', async (req, res) => {
   try {
-    const songs = await Song.find()
-      .populate('artist', 'name image')
-      .populate('album', 'title coverUrl')
-      .sort({ plays: -1 })
-      .limit(20);
+    const now = new Date();
+    const songs = await Song.aggregate([
+      {
+        $addFields: {
+          ageMs: { $subtract: [now, '$createdAt'] },
+          ageDays: { $divide: [{ $subtract: [now, '$createdAt'] }, 86400000] },
+        }
+      },
+      {
+        $addFields: {
+          recencyDecay: {
+            $pow: [2, { $multiply: [-1, { $divide: ['$ageDays', 7] }] }]
+          }
+        }
+      },
+      {
+        $addFields: {
+          trendingScore: {
+            $multiply: [
+              { $add: ['$plays', { $multiply: ['$likes', 2] }] },
+              '$recencyDecay'
+            ]
+          }
+        }
+      },
+      { $sort: { trendingScore: -1 } },
+      { $limit: 20 },
+      {
+        $lookup: {
+          from: 'artists',
+          localField: 'artist',
+          foreignField: '_id',
+          as: 'artist',
+          pipeline: [{ $project: { name: 1, image: 1 } }]
+        }
+      },
+      { $unwind: '$artist' },
+      {
+        $lookup: {
+          from: 'albums',
+          localField: 'album',
+          foreignField: '_id',
+          as: 'album',
+          pipeline: [{ $project: { title: 1, coverUrl: 1 } }]
+        }
+      },
+      {
+        $addFields: {
+          album: { $ifNull: [{ $arrayElemAt: ['$album', 0] }, null] }
+        }
+      },
+      {
+        $project: {
+          ageMs: 0, ageDays: 0, recencyDecay: 0, trendingScore: 0
+        }
+      }
+    ]);
+
     res.json(songs);
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error' });
