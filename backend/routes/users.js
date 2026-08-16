@@ -227,5 +227,50 @@ router.delete('/:id', adminAuth, async (req, res) => {
   }
 });
 
+// POST /api/users/track-time
+router.post('/track-time', auth, async (req, res) => {
+  try {
+    const { device } = req.body; // e.g. "Windows / Chrome" from frontend
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+    const currentDaily = user.dailyListenTime.get(today) || 0;
+
+    user.lastActiveAt = new Date();
+    user.totalListenTime += 60; // 60 seconds
+    user.dailyListenTime.set(today, currentDaily + 60);
+
+    // Track device if provided and changed
+    if (device && device !== user.device) {
+      user.device = device;
+    }
+
+    await user.save({ validateBeforeSave: false }); // Skip validation just in case
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    // Fail silently so it doesn't spam errors on heartbeat
+    console.error('Tracking error:', error);
+    res.status(500).json({ success: false });
+  }
+});
+
+// GET /api/users (Admin only)
+router.get('/', adminAuth, async (req, res) => {
+  try {
+    const users = await User.find({})
+      .select('username email avatar createdAt lastActiveAt device totalListenTime dailyListenTime isVerified role')
+      .sort({ createdAt: -1 });
+    
+    res.json({ success: true, users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error fetching users' });
+  }
+});
+
 module.exports = router;
 

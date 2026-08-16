@@ -60,7 +60,18 @@ const userSchema = new mongoose.Schema({
     default: false
   },
   otp: String,
-  otpExpires: Date
+  otpExpires: Date,
+  lastActiveAt: Date,
+  device: String,
+  totalListenTime: {
+    type: Number,
+    default: 0
+  },
+  dailyListenTime: {
+    type: Map,
+    of: Number,
+    default: {}
+  }
 });
 
 userSchema.pre('save', async function (next) {

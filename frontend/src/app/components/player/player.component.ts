@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { PlayerService, RepeatMode } from '../../services/player.service';
 import { SongService, Song } from '../../services/song.service';
 import { AuthService } from '../../services/auth.service';
+import { UserService } from '../../services/user.service';
 import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
 @Component({
@@ -354,10 +355,13 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   private subs: Subscription[] = [];
 
+  private trackingInterval: any;
+
   constructor(
     private playerService: PlayerService,
-    public songService: SongService,
-    private authService: AuthService
+    private songService: SongService,
+    private authService: AuthService,
+    private userService: UserService
   ) {}
 
   ngOnInit(): void {
@@ -369,7 +373,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
       this.authService.likedSongIds$.subscribe(ids => {
         this.isLiked = this.currentSong ? ids.has(this.currentSong._id) : false;
       }),
-      this.playerService.isPlaying$.subscribe(p => { this.isPlaying = p; }),
+      this.playerService.isPlaying$.subscribe(p => { 
+        this.isPlaying = p;
+        this.manageTracking();
+      }),
       this.playerService.isLoading$.subscribe(l => { this.isLoading = l; }),
       this.playerService.isShuffle$.subscribe(s => { this.isShuffle = s; }),
       this.playerService.repeatMode$.subscribe(r => { this.repeatMode = r; }),
@@ -383,8 +390,25 @@ export class PlayerComponent implements OnInit, OnDestroy {
     );
   }
 
+  manageTracking(): void {
+    if (this.isPlaying) {
+      if (!this.trackingInterval) {
+        this.trackingInterval = setInterval(() => {
+          const device = navigator.userAgent;
+          this.userService.trackTime(device).subscribe();
+        }, 60000); // Send heartbeat every 60 seconds
+      }
+    } else {
+      if (this.trackingInterval) {
+        clearInterval(this.trackingInterval);
+        this.trackingInterval = null;
+      }
+    }
+  }
+
   ngOnDestroy(): void {
     this.subs.forEach(s => s.unsubscribe());
+    if (this.trackingInterval) clearInterval(this.trackingInterval);
   }
 
   togglePlay(): void { this.playerService.togglePlay(); }

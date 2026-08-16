@@ -269,6 +269,10 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
                     <th>Email</th>
                     <th>Role</th>
                     <th>Joined</th>
+                    <th>Status</th>
+                    <th>Device</th>
+                    <th>Listen Time Today</th>
+                    <th>Total Listen Time</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -279,6 +283,13 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
                       <td>{{ user.email }}</td>
                       <td><span class="role-badge" [class.admin]="user.role === 'admin'">{{ user.role }}</span></td>
                       <td>{{ user.createdAt | date: 'mediumDate' }}</td>
+                      <td>
+                        <span class="status-dot" [class.online]="isOnline(user.lastActiveAt)"></span>
+                        {{ isOnline(user.lastActiveAt) ? 'Online' : 'Offline' }}
+                      </td>
+                      <td>{{ user.device || 'Unknown' }}</td>
+                      <td>{{ formatDuration(getDailyListenTime(user)) }}</td>
+                      <td>{{ formatDuration(user.totalListenTime || 0) }}</td>
                       <td class="actions-cell">
                         @if (user._id !== currentUserId) {
                           @if (user.role === 'admin') {
@@ -473,10 +484,20 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
       .role-badge {
         padding: 0.25rem 0.5rem;
         border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
         font-size: 0.75rem;
-        font-weight: 700;
-        background: var(--border-color);
-        &.admin { background: rgba(29,185,84,0.2); color: #1DB954; }
+        text-transform: uppercase;
+        &.admin { background: rgba(29, 185, 84, 0.2); color: #1DB954; }
+      }
+
+      .status-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #555;
+        margin-right: 6px;
+        &.online { background: #1DB954; }
       }
     }
 
@@ -864,6 +885,22 @@ export class AdminComponent implements OnInit {
   }
 
   formatDuration(seconds: number): string {
-    return this.songService.formatDuration(seconds);
+    if (!seconds) return '0m';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  }
+
+  isOnline(lastActiveAt?: string | Date): boolean {
+    if (!lastActiveAt) return false;
+    const diff = Date.now() - new Date(lastActiveAt).getTime();
+    return diff < 5 * 60 * 1000; // Online if active within last 5 minutes
+  }
+
+  getDailyListenTime(user: any): number {
+    if (!user.dailyListenTime) return 0;
+    const today = new Date().toISOString().split('T')[0];
+    return user.dailyListenTime[today] || 0;
   }
 }

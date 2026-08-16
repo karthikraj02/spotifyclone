@@ -32,9 +32,9 @@ export class UserService {
     return this.http.get<Song[]>(`${this.API}/me/liked-songs`);
   }
 
-  getAllUsers(page = 1, limit = 20): Observable<{ users: User[]; pagination: any }> {
+  getAllUsers(page = 1, limit = 20): Observable<{ success: boolean; users: any[]; pagination?: any }> {
     const params = new HttpParams().set('page', page).set('limit', limit);
-    return this.http.get<{ users: User[]; pagination: any }>(this.API, { params });
+    return this.http.get<{ success: boolean; users: any[]; pagination?: any }>(this.API, { params });
   }
 
   deleteUser(id: string): Observable<{ message: string }> {
@@ -43,5 +43,9 @@ export class UserService {
 
   updateRole(id: string, role: 'admin' | 'user'): Observable<{ success: boolean; user: User }> {
     return this.http.patch<{ success: boolean; user: User }>(`${this.API}/${id}/role`, { role });
+  }
+
+  trackTime(device: string): Observable<any> {
+    return this.http.post(`${this.API}/track-time`, { device });
   }
 }
