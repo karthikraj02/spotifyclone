@@ -28,18 +28,35 @@ const AUDIO_MIME_TYPES = {
 // Uploads directory (resolved once)
 const UPLOADS_DIR = path.resolve(__dirname, '../uploads');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = file.fieldname === 'audio'
-      ? path.join(UPLOADS_DIR, 'audio')
-      : path.join(UPLOADS_DIR, 'images');
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    // Generate safe filename: timestamp-random.ext
-    const ext = path.extname(file.originalname).toLowerCase();
-    const safeName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    cb(null, safeName);
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    // Generate safe filename: timestamp-random
+    const safeName = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    
+    if (file.fieldname === 'audio') {
+      return {
+        folder: 'spotifyclone/audio',
+        resource_type: 'video', // Audio must be uploaded as 'video' in Cloudinary
+        public_id: safeName
+      };
+    } else {
+      return {
+        folder: 'spotifyclone/images',
+        resource_type: 'image',
+        public_id: safeName
+      };
+    }
   }
 });
 
@@ -83,74 +100,6 @@ const handleUpload = (uploadMiddleware) => (req, res, next) => {
   });
 };
 
-// File signature ("magic bytes") checks - a malicious file can be trivially renamed
-// to end in .mp3 or .jpg to slip past an extension-only check, so this reads the
-// first few real bytes on disk and confirms they match a known container format
-// for the field the file was uploaded under before the upload is accepted.
-const matchesSignature = (buf, ext) => {
-  if (buf.length < 4) return false;
-  const b = buf;
-  switch (ext) {
-    case '.jpg':
-    case '.jpeg':
-      return b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF;
-    case '.png':
-      return b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47;
-    case '.gif':
-      return b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38;
-    case '.webp':
-      return b.length >= 12 && b.slice(0, 4).toString('ascii') === 'RIFF' && b.slice(8, 12).toString('ascii') === 'WEBP';
-    case '.mp3':
-      return (b[0] === 0x49 && b[1] === 0x44 && b[2] === 0x33) || // ID3 tag
-             (b[0] === 0xFF && (b[1] & 0xE0) === 0xE0); // MPEG frame sync
-    case '.wav':
-      return b.length >= 12 && b.slice(0, 4).toString('ascii') === 'RIFF' && b.slice(8, 12).toString('ascii') === 'WAVE';
-    case '.ogg':
-      return b.slice(0, 4).toString('ascii') === 'OggS';
-    case '.flac':
-      return b.slice(0, 4).toString('ascii') === 'fLaC';
-    case '.m4a':
-      return b.length >= 8 && b.slice(4, 8).toString('ascii') === 'ftyp';
-    case '.aac':
-      return b[0] === 0xFF && (b[1] & 0xF6) === 0xF0; // ADTS sync word
-    case '.webm':
-      return b[0] === 0x1A && b[1] === 0x45 && b[2] === 0xDF && b[3] === 0xA3; // EBML header
-    default:
-      return false;
-  }
-};
-
-const verifyUploadedFileSignatures = (req, res, next) => {
-  if (!req.files) return next();
-
-  const allFiles = [...(req.files.audio || []), ...(req.files.cover || [])];
-  for (const file of allFiles) {
-    let fd;
-    try {
-      const ext = path.extname(file.originalname).toLowerCase();
-      fd = fs.openSync(file.path, 'r');
-      const buf = Buffer.alloc(16);
-      fs.readSync(fd, buf, 0, 16, 0);
-      fs.closeSync(fd);
-      fd = undefined;
-
-      if (!matchesSignature(buf, ext)) {
-        // Clean up every file from this request, not just the bad one
-        for (const f of allFiles) {
-          try { fs.unlinkSync(f.path); } catch (_) { /* best-effort cleanup */ }
-        }
-        return res.status(415).json({
-          success: false,
-          message: `The uploaded file for "${file.fieldname}" does not match its extension (${ext}). The file content does not look like a valid ${ext} file.`
-        });
-      }
-    } catch (e) {
-      if (fd !== undefined) { try { fs.closeSync(fd); } catch (_) { /* ignore */ } }
-      return res.status(400).json({ success: false, message: 'Could not read uploaded file' });
-    }
-  }
-  next();
-};
 
 // GET /api/songs - Get all songs (paginated)
 router.get('/', async (req, res) => {
@@ -311,7 +260,7 @@ router.get('/:id/stream', async (req, res) => {
 router.post('/', adminAuth, handleUpload(upload.fields([
   { name: 'audio', maxCount: 1 },
   { name: 'cover', maxCount: 1 }
-])), verifyUploadedFileSignatures, async (req, res) => {
+])), async (req, res) => {
   try {
     const { title, artistId, albumId, duration, genre } = req.body;
 
@@ -334,7 +283,7 @@ router.post('/', adminAuth, handleUpload(upload.fields([
       return res.status(404).json({ success: false, message: 'Artist not found' });
     }
 
-    // Validate album BEFORE creating song (Phase 5 fix)
+    // Validate album BEFORE creating song
     let album = null;
     if (albumId) {
       if (typeof albumId !== 'string' || !isValidObjectId(albumId)) {
@@ -351,7 +300,7 @@ router.post('/', adminAuth, handleUpload(upload.fields([
     }
 
     const audioUrl = req.files?.audio
-      ? `/uploads/audio/${req.files.audio[0].filename}`
+      ? req.files.audio[0].path // Cloudinary returns the secure URL in path
       : req.body.audioUrl;
 
     if (!audioUrl) {
@@ -359,7 +308,7 @@ router.post('/', adminAuth, handleUpload(upload.fields([
     }
 
     const coverUrl = req.files?.cover
-      ? `/uploads/images/${req.files.cover[0].filename}`
+      ? req.files.cover[0].path // Cloudinary returns the secure URL in path
       : (req.body.coverUrl || `https://picsum.photos/seed/${Date.now()}/300/300`);
 
     const song = await Song.create({
@@ -398,7 +347,7 @@ router.post('/', adminAuth, handleUpload(upload.fields([
 router.put('/:id', adminAuth, handleUpload(upload.fields([
   { name: 'audio', maxCount: 1 },
   { name: 'cover', maxCount: 1 }
-])), verifyUploadedFileSignatures, async (req, res) => {
+])), async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({ success: false, message: 'Invalid song ID' });
@@ -461,13 +410,13 @@ router.put('/:id', adminAuth, handleUpload(upload.fields([
     const oldCoverPath = song.coverUrl;
 
     if (req.files?.audio) {
-      song.audioUrl = `/uploads/audio/${req.files.audio[0].filename}`;
+      song.audioUrl = req.files.audio[0].path;
     } else if (audioUrl) {
       song.audioUrl = audioUrl;
     }
 
     if (req.files?.cover) {
-      song.coverUrl = `/uploads/images/${req.files.cover[0].filename}`;
+      song.coverUrl = req.files.cover[0].path;
     } else if (coverUrl) {
       song.coverUrl = coverUrl;
     }
@@ -489,19 +438,24 @@ router.put('/:id', adminAuth, handleUpload(upload.fields([
       }
     }
 
-    // Clean up replaced local files (best-effort; ignore errors)
-    if (req.files?.audio && oldAudioPath && !oldAudioPath.startsWith('http')) {
-      const p = path.resolve(__dirname, '..', oldAudioPath.replace(/^\//, ''));
-      if (p.startsWith(path.resolve(UPLOADS_DIR)) && fs.existsSync(p)) {
-        try { fs.unlinkSync(p); } catch (_) { /* best-effort cleanup */ }
-      }
+    // Clean up replaced files from Cloudinary
+    const extractPublicId = (url) => {
+      if (!url) return null;
+      const parts = url.split('/');
+      const filename = parts[parts.length - 1];
+      const folder = parts[parts.length - 2];
+      return filename ? `${folder}/${filename.split('.')[0]}` : null;
+    };
+
+    if (req.files?.audio && oldAudioPath && oldAudioPath.includes('cloudinary.com')) {
+      const publicId = extractPublicId(oldAudioPath);
+      if (publicId) cloudinary.uploader.destroy(`spotifyclone/${publicId}`, { resource_type: 'video' }).catch(() => {});
     }
-    if (req.files?.cover && oldCoverPath && !oldCoverPath.startsWith('http')) {
-      const p = path.resolve(__dirname, '..', oldCoverPath.replace(/^\//, ''));
-      if (p.startsWith(path.resolve(UPLOADS_DIR)) && fs.existsSync(p)) {
-        try { fs.unlinkSync(p); } catch (_) { /* best-effort cleanup */ }
-      }
+    if (req.files?.cover && oldCoverPath && oldCoverPath.includes('cloudinary.com')) {
+      const publicId = extractPublicId(oldCoverPath);
+      if (publicId) cloudinary.uploader.destroy(`spotifyclone/${publicId}`, { resource_type: 'image' }).catch(() => {});
     }
+
 
     const populated = await Song.findById(song._id)
       .populate('artist', 'name image')
@@ -539,18 +493,22 @@ router.delete('/:id', adminAuth, async (req, res) => {
       Playlist.updateMany({ songs: song._id }, { $pull: { songs: song._id } })
     ]);
 
-    // Delete uploaded files if local
-    if (!song.audioUrl.startsWith('http')) {
-      const audioPath = path.resolve(__dirname, '..', song.audioUrl.replace(/^\//, ''));
-      if (audioPath.startsWith(path.resolve(UPLOADS_DIR)) && fs.existsSync(audioPath)) {
-        fs.unlinkSync(audioPath);
-      }
+    // Clean up replaced files from Cloudinary
+    const extractPublicId = (url) => {
+      if (!url) return null;
+      const parts = url.split('/');
+      const filename = parts[parts.length - 1];
+      const folder = parts[parts.length - 2];
+      return filename ? `${folder}/${filename.split('.')[0]}` : null;
+    };
+
+    if (song.audioUrl && song.audioUrl.includes('cloudinary.com')) {
+      const publicId = extractPublicId(song.audioUrl);
+      if (publicId) cloudinary.uploader.destroy(`spotifyclone/${publicId}`, { resource_type: 'video' }).catch(() => {});
     }
-    if (song.coverUrl && !song.coverUrl.startsWith('http')) {
-      const coverPath = path.resolve(__dirname, '..', song.coverUrl.replace(/^\//, ''));
-      if (coverPath.startsWith(path.resolve(UPLOADS_DIR)) && fs.existsSync(coverPath)) {
-        fs.unlinkSync(coverPath);
-      }
+    if (song.coverUrl && song.coverUrl.includes('cloudinary.com')) {
+      const publicId = extractPublicId(song.coverUrl);
+      if (publicId) cloudinary.uploader.destroy(`spotifyclone/${publicId}`, { resource_type: 'image' }).catch(() => {});
     }
 
     await song.deleteOne();
