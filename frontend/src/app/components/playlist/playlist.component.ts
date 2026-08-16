@@ -221,7 +221,7 @@ export class PlaylistComponent implements OnInit {
   playlist: Playlist | null = null;
   isLoading = true;
   isOwner = false;
-  headerGradient = 'linear-gradient(to bottom, #2d4a6e, var(--bg-primary))';
+  headerGradient = 'linear-gradient(to bottom, var(--playlist-gradient-start), var(--bg-primary))';
   showDeleteConfirm = false;
 
   constructor(

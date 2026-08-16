@@ -71,7 +71,7 @@ import { ThemeService, Theme } from '../../services/theme.service';
   styles: [`
     .topbar {
       height: 64px;
-      background: rgba(var(--bg-secondary-rgb, 24, 24, 24),0.95);
+      background: var(--bg-secondary);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -90,7 +90,7 @@ import { ThemeService, Theme } from '../../services/theme.service';
         width: 32px;
         height: 32px;
         border-radius: 50%;
-        background: rgba(0,0,0,0.7);
+        background: var(--bg-tertiary);
         border: none;
         color: var(--text-primary);
         display: flex;
@@ -98,7 +98,7 @@ import { ThemeService, Theme } from '../../services/theme.service';
         justify-content: center;
         cursor: pointer;
         transition: background 0.2s;
-        &:hover { background: rgba(255,255,255,0.2); }
+        &:hover { background: var(--bg-elevated); }
       }
     }
 
@@ -113,7 +113,7 @@ import { ThemeService, Theme } from '../../services/theme.service';
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      background: rgba(0,0,0,0.7);
+      background: var(--bg-tertiary);
       border: none;
       color: var(--text-primary);
       display: flex;
@@ -121,21 +121,21 @@ import { ThemeService, Theme } from '../../services/theme.service';
       justify-content: center;
       cursor: pointer;
       transition: background 0.2s, transform 0.2s;
-      &:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); }
+      &:hover { background: var(--bg-elevated); transform: scale(1.05); }
     }
 
     .user-menu {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      background: rgba(0,0,0,0.7);
+      background: var(--bg-tertiary);
       border-radius: 500px;
       padding: 0.375rem 0.75rem 0.375rem 0.375rem;
       cursor: pointer;
       transition: background 0.2s;
       user-select: none;
 
-      &:hover, &.open { background: var(--border-color); }
+      &:hover, &.open { background: var(--bg-elevated); }
 
       .avatar {
         width: 28px;

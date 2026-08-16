@@ -87,7 +87,7 @@ import { AuthService } from '../../services/auth.service';
   `,
   styles: [`
     .sidebar {
-      background: #000;
+      background: var(--sidebar-bg);
       height: 100%;
       display: flex;
       flex-direction: column;

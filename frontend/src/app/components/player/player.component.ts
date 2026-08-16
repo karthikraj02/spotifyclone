@@ -262,7 +262,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
     .progress-track {
       flex: 1;
       height: 4px;
-      background: #535353;
+      background: var(--bg-elevated);
       border-radius: 2px;
       cursor: pointer;
       position: relative;
@@ -304,7 +304,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
     .volume-track {
       width: 93px;
       height: 4px;
-      background: #535353;
+      background: var(--bg-elevated);
       border-radius: 2px;
       cursor: pointer;
       position: relative;

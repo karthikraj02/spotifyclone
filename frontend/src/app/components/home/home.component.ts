@@ -107,7 +107,7 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
   styles: [`
     .home-page {
       padding: 1.5rem 2rem 2rem;
-      background: linear-gradient(180deg, #1a3a2a 0%, var(--bg-primary) 30%);
+      background: linear-gradient(180deg, var(--hero-gradient-start) 0%, var(--bg-primary) 30%);
       min-height: 100%;
     }
 

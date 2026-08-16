@@ -147,7 +147,8 @@ import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 export class AlbumComponent implements OnInit {
   album: AlbumDetail | null = null;
   isLoading = true;
-  headerGradient = 'linear-gradient(to bottom, #4a2d5e, var(--bg-primary))';
+  isPlaying = false;
+  headerGradient = 'linear-gradient(to bottom, var(--album-gradient-start), var(--bg-primary))';
 
   constructor(
     private route: ActivatedRoute,

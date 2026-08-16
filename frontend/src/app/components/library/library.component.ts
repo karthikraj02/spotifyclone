@@ -202,7 +202,7 @@ import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.com
       align-items: flex-end;
       gap: 1.5rem;
       padding: 2rem;
-      background: linear-gradient(to bottom, #4a235a, var(--bg-primary));
+      background: linear-gradient(to bottom, var(--library-gradient-start), var(--bg-primary));
       border-radius: 8px;
       margin-bottom: 1.5rem;
 

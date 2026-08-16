@@ -220,7 +220,7 @@ export class ArtistComponent implements OnInit {
   artist: ArtistDetail | null = null;
   isLoading = true;
   showAllSongs = false;
-  heroGradient = 'linear-gradient(to bottom, #3d3d3d, var(--bg-primary))';
+  heroGradient = 'linear-gradient(to bottom, var(--artist-gradient-start), var(--bg-primary))';
   isFollowing = false;
   isFollowLoading = false;
 
