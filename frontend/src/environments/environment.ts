@@ -1,5 +1,5 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:5000/api',
-  serverUrl: 'http://localhost:5000'
+  apiUrl: 'https://spotifyclone-i7fo.vercel.app/api',
+  serverUrl: 'https://spotifyclone-i7fo.vercel.app'
 };
