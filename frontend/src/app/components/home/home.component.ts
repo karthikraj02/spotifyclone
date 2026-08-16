@@ -3,16 +3,17 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { SongService, Song } from '../../services/song.service';
 import { PlaylistService, Playlist } from '../../services/playlist.service';
-import { ArtistService, ArtistDetail } from '../../services/artist.service';
+import { ArtistService, ArtistListItem } from '../../services/artist.service';
 import { PlayerService } from '../../services/player.service';
 import { AuthService } from '../../services/auth.service';
 import { SongCardComponent } from '../shared/song-card/song-card.component';
 import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.component';
+import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink, SongCardComponent, PlaylistCardComponent],
+  imports: [CommonModule, RouterLink, SongCardComponent, PlaylistCardComponent, AssetUrlPipe],
   template: `
     <div class="home-page">
       <div class="greeting-section">
@@ -21,7 +22,7 @@ import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.com
           <div class="quick-picks">
             @for (playlist of recentPlaylists; track playlist._id) {
               <a [routerLink]="['/playlist', playlist._id]" class="quick-pick-item">
-                <img [src]="playlist.coverUrl" [alt]="playlist.name" />
+                <img [src]="playlist.coverUrl | assetUrl" [alt]="playlist.name" />
                 <span>{{ playlist.name }}</span>
                 <button class="play-fab" (click)="playPlaylist(playlist, $event)">
                   <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
@@ -92,7 +93,7 @@ import { PlaylistCardComponent } from '../shared/playlist-card/playlist-card.com
             @for (artist of artists.slice(0, 8); track artist._id) {
               <a [routerLink]="['/artist', artist._id]" class="artist-card">
                 <div class="artist-img-wrapper">
-                  <img [src]="artist.image" [alt]="artist.name" />
+                  <img [src]="artist.image | assetUrl" [alt]="artist.name" />
                 </div>
                 <p class="artist-name">{{ artist.name }}</p>
                 <span class="artist-label">Artist</span>
@@ -280,7 +281,7 @@ export class HomeComponent implements OnInit {
   trendingSongs: Song[] = [];
   playlists: Playlist[] = [];
   recentPlaylists: Playlist[] = [];
-  artists: ArtistDetail[] = [];
+  artists: ArtistListItem[] = [];
   isLoadingTrending = true;
   isLoadingPlaylists = true;
   isLoadingArtists = true;

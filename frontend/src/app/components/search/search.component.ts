@@ -4,14 +4,15 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Subject, forkJoin, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, takeUntil, tap, catchError } from 'rxjs/operators';
 import { SongService, Song } from '../../services/song.service';
-import { ArtistService, ArtistDetail } from '../../services/artist.service';
+import { ArtistService, ArtistListItem } from '../../services/artist.service';
 import { RouterLink } from '@angular/router';
 import { SongCardComponent } from '../shared/song-card/song-card.component';
+import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-search',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, SongCardComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, SongCardComponent, AssetUrlPipe],
   template: `
     <div class="search-page">
       <div class="search-header">
@@ -67,7 +68,7 @@ import { SongCardComponent } from '../shared/song-card/song-card.component';
                 @for (artist of artistResults; track artist._id) {
                   <a [routerLink]="['/artist', artist._id]" class="artist-card">
                     <div class="artist-img">
-                      <img [src]="artist.image" [alt]="artist.name" />
+                      <img [src]="artist.image | assetUrl" [alt]="artist.name" />
                     </div>
                     <p class="name">{{ artist.name }}</p>
                     <span class="label">Artist</span>
@@ -252,7 +253,7 @@ import { SongCardComponent } from '../shared/song-card/song-card.component';
 export class SearchComponent implements OnInit, OnDestroy {
   searchControl = new FormControl('');
   searchResults: Song[] = [];
-  artistResults: ArtistDetail[] = [];
+  artistResults: ArtistListItem[] = [];
   isSearching = false;
   hasSearched = false;
 

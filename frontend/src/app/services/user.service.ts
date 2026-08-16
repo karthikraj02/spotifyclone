@@ -40,4 +40,8 @@ export class UserService {
   deleteUser(id: string): Observable<{ message: string }> {
     return this.http.delete<{ message: string }>(`${this.API}/${id}`);
   }
+
+  updateRole(id: string, role: 'admin' | 'user'): Observable<{ success: boolean; user: User }> {
+    return this.http.patch<{ success: boolean; user: User }>(`${this.API}/${id}/role`, { role });
+  }
 }

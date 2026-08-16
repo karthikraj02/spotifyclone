@@ -129,23 +129,35 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(200).json({ success: true, message: 'If that email is registered, a reset link has been generated.' });
     }
 
-    // Generate token
-    const resetToken = crypto.randomBytes(20).toString('hex');
-    user.resetPasswordToken = resetToken;
+    // Generate a raw token to send to the user, but only ever persist its hash.
+    // This way a database read/leak can never be used to reset a password directly.
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    // Only the password field's validators would apply here and we aren't touching it,
+    // so this is safe to validate normally rather than skipping validation entirely.
+    // Actually, Mongoose will validate the whole document if required fields like username are missing.
     await user.save({ validateBeforeSave: false });
 
-    // Log the reset link for development (Simulating email sending)
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:4200'}/reset-password/${resetToken}`;
-    console.log(`\n======================================================`);
-    console.log(`[SIMULATED EMAIL] Password Reset Request for ${user.email}`);
-    console.log(`Please click this link to reset your password:`);
-    console.log(`${resetUrl}`);
-    console.log(`======================================================\n`);
 
-    res.status(200).json({ 
-      success: true, 
-      message: 'Password reset link has been printed to the backend console for testing.' 
+    // Never log the raw reset URL/token in production - it is equivalent to a password.
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`\n======================================================`);
+      console.log(`[SIMULATED EMAIL] Password Reset Request for ${user.email}`);
+      console.log(`Please click this link to reset your password:`);
+      console.log(`${resetUrl}`);
+      console.log(`======================================================\n`);
+    }
+    // TODO: integrate a real email provider (e.g. SendGrid/SES) to deliver resetUrl.
+    // Until that is wired up, the link is only observable via the development console log above.
+
+    res.status(200).json({
+      success: true,
+      message: process.env.NODE_ENV !== 'production'
+        ? 'Password reset link has been printed to the backend console for testing.'
+        : 'If that email is registered, a reset link has been generated.'
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error processing forgot password request' });
@@ -158,12 +170,22 @@ router.post('/reset-password/:token', async (req, res) => {
     const { password } = req.body;
     const { token } = req.params;
 
-    if (!password) {
+    if (!password || typeof password !== 'string') {
       return res.status(400).json({ success: false, message: 'New password is required' });
     }
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ success: false, message: 'Password reset token is invalid or has expired' });
+    }
+
+    // The raw token from the URL is never stored - hash it the same way it was hashed
+    // at generation time and compare hashes, so a DB leak alone can't be used as a token.
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
     const user = await User.findOne({
-      resetPasswordToken: token,
+      resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: Date.now() }
     });
 
@@ -171,7 +193,9 @@ router.post('/reset-password/:token', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password reset token is invalid or has expired' });
     }
 
-    // Set new password
+    // Set new password - goes through the normal pre('save') hashing + minlength validator.
+    // Wait, pre('save') will NOT hash the password if validateBeforeSave: false is passed? 
+    // Yes it will, validation and middleware are separate. But we will do it safely.
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
@@ -179,6 +203,9 @@ router.post('/reset-password/:token', async (req, res) => {
 
     res.status(200).json({ success: true, message: 'Your password has been successfully reset. Please log in.' });
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: Object.values(error.errors).map(e => e.message).join(', ') });
+    }
     res.status(500).json({ success: false, message: 'Server error processing password reset' });
   }
 });

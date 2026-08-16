@@ -83,6 +83,75 @@ const handleUpload = (uploadMiddleware) => (req, res, next) => {
   });
 };
 
+// File signature ("magic bytes") checks - a malicious file can be trivially renamed
+// to end in .mp3 or .jpg to slip past an extension-only check, so this reads the
+// first few real bytes on disk and confirms they match a known container format
+// for the field the file was uploaded under before the upload is accepted.
+const matchesSignature = (buf, ext) => {
+  if (buf.length < 4) return false;
+  const b = buf;
+  switch (ext) {
+    case '.jpg':
+    case '.jpeg':
+      return b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF;
+    case '.png':
+      return b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47;
+    case '.gif':
+      return b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38;
+    case '.webp':
+      return b.length >= 12 && b.slice(0, 4).toString('ascii') === 'RIFF' && b.slice(8, 12).toString('ascii') === 'WEBP';
+    case '.mp3':
+      return (b[0] === 0x49 && b[1] === 0x44 && b[2] === 0x33) || // ID3 tag
+             (b[0] === 0xFF && (b[1] & 0xE0) === 0xE0); // MPEG frame sync
+    case '.wav':
+      return b.length >= 12 && b.slice(0, 4).toString('ascii') === 'RIFF' && b.slice(8, 12).toString('ascii') === 'WAVE';
+    case '.ogg':
+      return b.slice(0, 4).toString('ascii') === 'OggS';
+    case '.flac':
+      return b.slice(0, 4).toString('ascii') === 'fLaC';
+    case '.m4a':
+      return b.length >= 8 && b.slice(4, 8).toString('ascii') === 'ftyp';
+    case '.aac':
+      return b[0] === 0xFF && (b[1] & 0xF6) === 0xF0; // ADTS sync word
+    case '.webm':
+      return b[0] === 0x1A && b[1] === 0x45 && b[2] === 0xDF && b[3] === 0xA3; // EBML header
+    default:
+      return false;
+  }
+};
+
+const verifyUploadedFileSignatures = (req, res, next) => {
+  if (!req.files) return next();
+
+  const allFiles = [...(req.files.audio || []), ...(req.files.cover || [])];
+  for (const file of allFiles) {
+    let fd;
+    try {
+      const ext = path.extname(file.originalname).toLowerCase();
+      fd = fs.openSync(file.path, 'r');
+      const buf = Buffer.alloc(16);
+      fs.readSync(fd, buf, 0, 16, 0);
+      fs.closeSync(fd);
+      fd = undefined;
+
+      if (!matchesSignature(buf, ext)) {
+        // Clean up every file from this request, not just the bad one
+        for (const f of allFiles) {
+          try { fs.unlinkSync(f.path); } catch (_) { /* best-effort cleanup */ }
+        }
+        return res.status(415).json({
+          success: false,
+          message: `The uploaded file for "${file.fieldname}" does not match its extension (${ext}). The file content does not look like a valid ${ext} file.`
+        });
+      }
+    } catch (e) {
+      if (fd !== undefined) { try { fs.closeSync(fd); } catch (_) { /* ignore */ } }
+      return res.status(400).json({ success: false, message: 'Could not read uploaded file' });
+    }
+  }
+  next();
+};
+
 // GET /api/songs - Get all songs (paginated)
 router.get('/', async (req, res) => {
   try {
@@ -242,7 +311,7 @@ router.get('/:id/stream', async (req, res) => {
 router.post('/', adminAuth, handleUpload(upload.fields([
   { name: 'audio', maxCount: 1 },
   { name: 'cover', maxCount: 1 }
-])), async (req, res) => {
+])), verifyUploadedFileSignatures, async (req, res) => {
   try {
     const { title, artistId, albumId, duration, genre } = req.body;
 
@@ -325,6 +394,128 @@ router.post('/', adminAuth, handleUpload(upload.fields([
   }
 });
 
+// PUT /api/songs/:id (admin) - edit metadata; audio/cover files are replaced separately if provided
+router.put('/:id', adminAuth, handleUpload(upload.fields([
+  { name: 'audio', maxCount: 1 },
+  { name: 'cover', maxCount: 1 }
+])), verifyUploadedFileSignatures, async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid song ID' });
+    }
+
+    const song = await Song.findById(req.params.id);
+    if (!song) {
+      return res.status(404).json({ success: false, message: 'Song not found' });
+    }
+
+    const { title, artistId, albumId, duration, genre, audioUrl, coverUrl } = req.body;
+
+    let newArtist = null;
+    if (artistId !== undefined) {
+      if (typeof artistId !== 'string' || !isValidObjectId(artistId)) {
+        return res.status(400).json({ success: false, message: 'Invalid artistId' });
+      }
+      newArtist = await Artist.findById(artistId);
+      if (!newArtist) {
+        return res.status(404).json({ success: false, message: 'Artist not found' });
+      }
+    }
+
+    let newAlbum = undefined; // undefined = "not touching this field"
+    if (albumId !== undefined) {
+      if (albumId === null || albumId === '') {
+        newAlbum = null; // explicit clear
+      } else {
+        if (typeof albumId !== 'string' || !isValidObjectId(albumId)) {
+          return res.status(400).json({ success: false, message: 'Invalid albumId' });
+        }
+        newAlbum = await Album.findById(albumId);
+        if (!newAlbum) {
+          return res.status(404).json({ success: false, message: 'Album not found' });
+        }
+        const effectiveArtistId = artistId || song.artist.toString();
+        if (newAlbum.artist.toString() !== effectiveArtistId) {
+          return res.status(400).json({ success: false, message: 'Album does not belong to the selected artist' });
+        }
+      }
+    }
+
+    const oldArtistId = song.artist.toString();
+    const oldAlbumId = song.album ? song.album.toString() : null;
+
+    if (title !== undefined) song.title = title.trim();
+    if (duration !== undefined) {
+      const parsedDuration = Number(duration);
+      if (isNaN(parsedDuration) || parsedDuration <= 0 || !isFinite(parsedDuration)) {
+        return res.status(400).json({ success: false, message: 'Duration must be a positive number' });
+      }
+      song.duration = parsedDuration;
+    }
+    if (genre !== undefined) song.genre = genre ? genre.trim() : 'Unknown';
+    if (artistId !== undefined) song.artist = artistId;
+    if (newAlbum !== undefined) song.album = newAlbum ? newAlbum._id : null;
+
+    // Replace files only if new ones were uploaded; delete the old local file afterwards.
+    const oldAudioPath = song.audioUrl;
+    const oldCoverPath = song.coverUrl;
+
+    if (req.files?.audio) {
+      song.audioUrl = `/uploads/audio/${req.files.audio[0].filename}`;
+    } else if (audioUrl) {
+      song.audioUrl = audioUrl;
+    }
+
+    if (req.files?.cover) {
+      song.coverUrl = `/uploads/images/${req.files.cover[0].filename}`;
+    } else if (coverUrl) {
+      song.coverUrl = coverUrl;
+    }
+
+    await song.save();
+
+    // Keep Artist.songs / Album.songs reference arrays in sync if artist/album changed
+    if (artistId !== undefined && artistId !== oldArtistId) {
+      await Promise.all([
+        Artist.updateOne({ _id: oldArtistId }, { $pull: { songs: song._id } }),
+        Artist.updateOne({ _id: artistId }, { $addToSet: { songs: song._id } })
+      ]);
+    }
+    if (newAlbum !== undefined) {
+      const newAlbumId = newAlbum ? newAlbum._id.toString() : null;
+      if (newAlbumId !== oldAlbumId) {
+        if (oldAlbumId) await Album.updateOne({ _id: oldAlbumId }, { $pull: { songs: song._id } });
+        if (newAlbumId) await Album.updateOne({ _id: newAlbumId }, { $addToSet: { songs: song._id } });
+      }
+    }
+
+    // Clean up replaced local files (best-effort; ignore errors)
+    if (req.files?.audio && oldAudioPath && !oldAudioPath.startsWith('http')) {
+      const p = path.resolve(__dirname, '..', oldAudioPath.replace(/^\//, ''));
+      if (p.startsWith(path.resolve(UPLOADS_DIR)) && fs.existsSync(p)) {
+        try { fs.unlinkSync(p); } catch (_) { /* best-effort cleanup */ }
+      }
+    }
+    if (req.files?.cover && oldCoverPath && !oldCoverPath.startsWith('http')) {
+      const p = path.resolve(__dirname, '..', oldCoverPath.replace(/^\//, ''));
+      if (p.startsWith(path.resolve(UPLOADS_DIR)) && fs.existsSync(p)) {
+        try { fs.unlinkSync(p); } catch (_) { /* best-effort cleanup */ }
+      }
+    }
+
+    const populated = await Song.findById(song._id)
+      .populate('artist', 'name image')
+      .populate('album', 'title coverUrl');
+
+    res.json(populated);
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: Object.values(error.errors).map(e => e.message).join(', ') });
+    }
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // DELETE /api/songs/:id (admin)
 router.delete('/:id', adminAuth, async (req, res) => {
   try {
@@ -370,29 +561,53 @@ router.delete('/:id', adminAuth, async (req, res) => {
 });
 
 // POST /api/songs/:id/like
+// Uses atomic, conditional updates instead of read-modify-write so that two rapid/concurrent
+// like requests for the same user+song can't push a duplicate array entry or double-increment
+// the like counter (the previous implementation loaded both documents, mutated them in memory,
+// and saved - a classic race condition under double-clicks or flaky networks retrying a request).
 router.post('/:id/like', auth, async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({ success: false, message: 'Invalid song ID' });
     }
-    const song = await Song.findById(req.params.id);
-    if (!song) {
+
+    const songExists = await Song.exists({ _id: req.params.id });
+    if (!songExists) {
       return res.status(404).json({ success: false, message: 'Song not found' });
     }
 
-    const user = await User.findById(req.user._id);
-    const alreadyLiked = user.likedSongs.some(id => id.toString() === song._id.toString());
+    const userId = req.user._id;
+    const songId = req.params.id;
 
-    if (alreadyLiked) {
-      user.likedSongs = user.likedSongs.filter(id => id.toString() !== song._id.toString());
-      song.likes = Math.max(0, song.likes - 1);
-    } else {
-      user.likedSongs.push(song._id);
-      song.likes += 1;
+    // Attempt to like: only matches (and only increments) if not already liked
+    const likeResult = await User.updateOne(
+      { _id: userId, likedSongs: { $ne: songId } },
+      { $addToSet: { likedSongs: songId } }
+    );
+
+    if (likeResult.modifiedCount > 0) {
+      const updatedSong = await Song.findByIdAndUpdate(songId, { $inc: { likes: 1 } }, { new: true });
+      return res.json({ liked: true, likes: updatedSong.likes });
     }
 
-    await Promise.all([user.save(), song.save()]);
-    res.json({ liked: !alreadyLiked, likes: song.likes });
+    // Not liked-just-now, so treat this click as an unlike
+    const unlikeResult = await User.updateOne(
+      { _id: userId, likedSongs: songId },
+      { $pull: { likedSongs: songId } }
+    );
+
+    if (unlikeResult.modifiedCount > 0) {
+      const updatedSong = await Song.findOneAndUpdate(
+        { _id: songId, likes: { $gt: 0 } },
+        { $inc: { likes: -1 } },
+        { new: true }
+      );
+      return res.json({ liked: false, likes: updatedSong ? updatedSong.likes : 0 });
+    }
+
+    // Lost a race with another identical request in-flight; just report current state
+    const currentSong = await Song.findById(songId).select('likes');
+    res.json({ liked: false, likes: currentSong ? currentSong.likes : 0 });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error' });
   }

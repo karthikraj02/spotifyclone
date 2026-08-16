@@ -6,10 +6,11 @@ import { filter } from 'rxjs/operators';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { TopbarComponent } from './components/topbar/topbar.component';
 import { PlayerComponent } from './components/player/player.component';
+import { ToastComponent } from './components/shared/toast/toast.component';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule, SidebarComponent, TopbarComponent, PlayerComponent],
+  imports: [RouterOutlet, CommonModule, SidebarComponent, TopbarComponent, PlayerComponent, ToastComponent],
   template: `
     <div class="app-container" [class.auth-layout]="isAuthPage">
       @if (!isAuthPage) {
@@ -25,6 +26,7 @@ import { PlayerComponent } from './components/player/player.component';
         <router-outlet></router-outlet>
       }
     </div>
+    <app-toast></app-toast>
   `,
   styles: [`
     .app-container {

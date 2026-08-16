@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -238,12 +238,26 @@ export class LoginComponent {
   loginForm: FormGroup;
   isLoading = false;
   errorMessage = '';
+  private returnUrl: string | null = null;
 
-  constructor(private fb: FormBuilder, private authService: AuthService, private router: Router) {
+  constructor(
+    private fb: FormBuilder,
+    private authService: AuthService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required]
     });
+
+    // Only ever accept a returnUrl that's a safe in-app path (see AuthService.isSafeReturnUrl) -
+    // a raw ?returnUrl query param is user-controlled input and an unvalidated redirect
+    // target would let a crafted login link send the user off-site after signing in.
+    const requested = this.route.snapshot.queryParamMap.get('returnUrl');
+    if (requested && this.authService.isSafeReturnUrl(requested)) {
+      this.returnUrl = requested;
+    }
   }
 
   onSubmit(): void {
@@ -258,7 +272,7 @@ export class LoginComponent {
 
     this.authService.login(email, password).subscribe({
       next: () => {
-        this.router.navigate(['/home']);
+        this.router.navigateByUrl(this.returnUrl || '/home');
       },
       error: (err) => {
         this.isLoading = false;

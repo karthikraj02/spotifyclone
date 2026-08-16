@@ -106,12 +106,39 @@ export class AuthService {
     return this.http.post<{ success: boolean; message: string }>(`${this.API}/reset-password/${token}`, { password });
   }
 
-  logout(): void {
+  /**
+   * Clears the local session and sends the user to the login page.
+   * @param returnUrl Optional path to return to after logging back in (used by the
+   *   401 interceptor when a session expires mid-navigation). Only ever used as a
+   *   same-origin, in-app router path - never an external URL - to avoid the guard
+   *   accidentally becoming an open redirect.
+   */
+  logout(returnUrl?: string): void {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
     this.currentUserSubject.next(null);
     this.likedSongIdsSubject.next(new Set());
-    this.router.navigate(['/login']);
+
+    if (returnUrl && this.isSafeReturnUrl(returnUrl)) {
+      this.router.navigate(['/login'], { queryParams: { returnUrl } });
+    } else {
+      this.router.navigate(['/login']);
+    }
+  }
+
+  /**
+   * A returnUrl must be an internal path (starts with a single "/", not "//" or
+   * a scheme like "https:") or it could be used to redirect a user off-site after
+   * they log in - e.g. ?returnUrl=https://evil.example.com or ?returnUrl=//evil.example.com.
+   */
+  isSafeReturnUrl(url: string): boolean {
+    if (!url || typeof url !== 'string') return false;
+    if (!url.startsWith('/')) return false;
+    if (url.startsWith('//')) return false;
+    if (url.startsWith('/\\')) return false;
+    if (url.toLowerCase().includes(':')) return false; // blocks "/\t/evil.com:..." style tricks and any scheme
+    if (url.startsWith('/login')) return false; // never loop back into login itself
+    return true;
   }
 
   private storeSession(res: AuthResponse): void {

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { Song, SongService } from './song.service';
+import { ToastService } from './toast.service';
 import { environment } from '../../environments/environment';
 
 export type RepeatMode = 'off' | 'all' | 'one';
@@ -35,19 +36,31 @@ export class PlayerService {
   private playRecorded = false;
   private playTimerId: ReturnType<typeof setTimeout> | null = null;
 
+  // Real playback history: indices into `queue`, in the order songs were actually
+  // played. Previous() pops from this so it always returns to what actually played
+  // before - including under shuffle, where "index - 1" would be meaningless.
+  private history: number[] = [];
+
+  // A shuffled permutation of not-yet-played queue indices for the current "lap".
+  // next() pops from this instead of calling Math.random() fresh each time, which
+  // guarantees the current song is excluded and nothing repeats until every other
+  // song in the queue has come up once. Refilled (reshuffled) once exhausted.
+  private shuffleBag: number[] = [];
+
   get currentSong(): Song | null {
     const idx = this.currentIndexSubject.value;
     const queue = this.queueSubject.value;
     return idx >= 0 && idx < queue.length ? queue[idx] : null;
   }
 
-  constructor(private songService: SongService) {}
+  constructor(private songService: SongService, private toastService: ToastService) {}
 
   playSong(song: Song, queue?: Song[]): void {
     const newQueue = queue || [song];
     const idx = newQueue.findIndex(s => s._id === song._id);
     this.queueSubject.next(newQueue);
     this.currentIndexSubject.next(idx >= 0 ? idx : 0);
+    this.resetPlaybackOrder();
     this.loadAndPlay(song);
   }
 
@@ -55,6 +68,7 @@ export class PlayerService {
     if (!songs.length) return;
     this.queueSubject.next(songs);
     this.currentIndexSubject.next(startIndex);
+    this.resetPlaybackOrder();
     this.loadAndPlay(songs[startIndex]);
   }
 
@@ -63,7 +77,9 @@ export class PlayerService {
     if (this.isPlayingSubject.value) {
       this.audio.pause();
     } else {
-      this.audio.play().catch(() => {/* autoplay blocked */});
+      this.audio.play().catch(() => {
+        this.toastService.show('Playback was blocked by the browser. Press play again to resume.', 'info');
+      });
     }
   }
 
@@ -75,20 +91,28 @@ export class PlayerService {
     const queue = this.queueSubject.value;
     if (!queue.length) return;
 
-    let nextIdx: number;
     const currentIdx = this.currentIndexSubject.value;
     const repeat = this.repeatModeSubject.value;
+    let nextIdx: number | null = null;
 
     if (this.isShuffleSubject.value) {
-      nextIdx = Math.floor(Math.random() * queue.length);
+      if (queue.length === 1) {
+        nextIdx = repeat === 'off' ? null : 0;
+      } else {
+        if (this.shuffleBag.length === 0) {
+          this.refillShuffleBag(currentIdx);
+        }
+        nextIdx = this.shuffleBag.length > 0 ? this.shuffleBag.pop()! : null;
+      }
     } else if (currentIdx < queue.length - 1) {
       nextIdx = currentIdx + 1;
     } else if (repeat === 'all') {
       nextIdx = 0;
-    } else {
-      return;
     }
 
+    if (nextIdx === null) return;
+
+    if (currentIdx >= 0) this.history.push(currentIdx);
     this.currentIndexSubject.next(nextIdx);
     this.loadAndPlay(queue[nextIdx]);
   }
@@ -97,11 +121,22 @@ export class PlayerService {
     const queue = this.queueSubject.value;
     if (!queue.length) return;
 
+    // Standard player behavior: if we're more than a few seconds into the song,
+    // "previous" restarts it instead of actually going back a track.
     if (this.audio && this.audio.currentTime > 3) {
       this.audio.currentTime = 0;
       return;
     }
 
+    if (this.history.length > 0) {
+      const prevIdx = this.history.pop()!;
+      this.currentIndexSubject.next(prevIdx);
+      this.loadAndPlay(queue[prevIdx]);
+      return;
+    }
+
+    // No recorded history yet (e.g. very first track of the session) - fall back
+    // to simple wraparound rather than doing nothing.
     const currentIdx = this.currentIndexSubject.value;
     const prevIdx = currentIdx > 0 ? currentIdx - 1 : queue.length - 1;
     this.currentIndexSubject.next(prevIdx);
@@ -120,8 +155,14 @@ export class PlayerService {
     if (this.audio) {
       this.audio.volume = clamped;
     }
-    if (clamped > 0) {
+    // Raising the volume above 0 should always produce sound, even if the user
+    // was previously muted - otherwise the UI shows "unmuted" while audio.muted
+    // is still true and nothing plays until they explicitly hit mute again.
+    if (clamped > 0 && this.isMutedSubject.value) {
       this.isMutedSubject.next(false);
+      if (this.audio) {
+        this.audio.muted = false;
+      }
     }
   }
 
@@ -129,6 +170,8 @@ export class PlayerService {
     const muted = !this.isMutedSubject.value;
     this.isMutedSubject.next(muted);
     if (this.audio) {
+      // The native `muted` property silences output without touching `.volume`,
+      // so unmuting automatically restores whatever volume level was set before.
       this.audio.muted = muted;
     }
   }
@@ -142,11 +185,33 @@ export class PlayerService {
 
   toggleShuffle(): void {
     this.isShuffleSubject.next(!this.isShuffleSubject.value);
+    // Force a fresh shuffle draw next time next() runs, rather than continuing
+    // to draw from a bag that was built under the opposite shuffle state.
+    this.shuffleBag = [];
   }
 
   addToQueue(song: Song): void {
     const queue = [...this.queueSubject.value, song];
     this.queueSubject.next(queue);
+    // Clear the bag so the newly added song is guaranteed to be included in the
+    // very next shuffle draw instead of waiting for a full lap to complete.
+    this.shuffleBag = [];
+  }
+
+  private resetPlaybackOrder(): void {
+    this.history = [];
+    this.shuffleBag = [];
+  }
+
+  private refillShuffleBag(excludeIdx: number): void {
+    const queue = this.queueSubject.value;
+    const indices = queue.map((_, i) => i).filter(i => i !== excludeIdx);
+    // Fisher-Yates shuffle
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    this.shuffleBag = indices;
   }
 
   private clearPlayTimer(): void {
@@ -177,27 +242,38 @@ export class PlayerService {
       ? song.audioUrl
       : `${environment.serverUrl}${song.audioUrl}`;
 
-    this.audio = new Audio(audioUrl);
-    this.audio.volume = this.isMutedSubject.value ? 0 : this.volumeSubject.value;
-    this.audio.muted = this.isMutedSubject.value;
+    const audioEl = new Audio(audioUrl);
+    this.audio = audioEl;
+    audioEl.volume = this.isMutedSubject.value ? 0 : this.volumeSubject.value;
+    audioEl.muted = this.isMutedSubject.value;
 
-    this.audio.addEventListener('loadedmetadata', () => {
-      this.durationSubject.next(this.audio!.duration);
+    // Every listener below captures `audioEl` locally and checks it's still the
+    // "live" element before touching shared state. Without this guard, a trailing
+    // event from an element that loadAndPlay() has already replaced (e.g. a slow
+    // 'error' firing after the user skipped to the next track) could stomp on the
+    // state of whatever is now actually playing.
+    const isLive = () => this.audio === audioEl;
+
+    audioEl.addEventListener('loadedmetadata', () => {
+      if (!isLive()) return;
+      this.durationSubject.next(audioEl.duration);
       this.isLoadingSubject.next(false);
     });
 
-    this.audio.addEventListener('timeupdate', () => {
-      this.currentTimeSubject.next(this.audio!.currentTime);
+    audioEl.addEventListener('timeupdate', () => {
+      if (!isLive()) return;
+      this.currentTimeSubject.next(audioEl.currentTime);
     });
 
-    this.audio.addEventListener('play', () => {
+    audioEl.addEventListener('play', () => {
+      if (!isLive()) return;
       this.isPlayingSubject.next(true);
 
       // Start play count timer: record play after 5 seconds of actual playback
       if (!this.playRecorded) {
         this.clearPlayTimer();
         this.playTimerId = setTimeout(() => {
-          if (!this.playRecorded && this.audio && !this.audio.paused) {
+          if (!this.playRecorded && isLive() && !audioEl.paused) {
             this.playRecorded = true;
             this.songService.recordPlay(song._id).subscribe({ error: () => {} });
           }
@@ -205,7 +281,8 @@ export class PlayerService {
       }
     });
 
-    this.audio.addEventListener('pause', () => {
+    audioEl.addEventListener('pause', () => {
+      if (!isLive()) return;
       this.isPlayingSubject.next(false);
       // Cancel play timer if paused before threshold
       if (!this.playRecorded) {
@@ -213,23 +290,27 @@ export class PlayerService {
       }
     });
 
-    this.audio.addEventListener('ended', () => {
+    audioEl.addEventListener('ended', () => {
+      if (!isLive()) return;
       this.isPlayingSubject.next(false);
       if (this.repeatModeSubject.value === 'one') {
-        this.audio!.currentTime = 0;
-        this.audio!.play().catch(() => {/* autoplay blocked */});
+        audioEl.currentTime = 0;
+        audioEl.play().catch(() => {/* autoplay blocked */});
       } else {
         this.next();
       }
     });
 
-    this.audio.addEventListener('error', () => {
+    audioEl.addEventListener('error', () => {
+      if (!isLive()) return;
       this.isLoadingSubject.next(false);
       this.isPlayingSubject.next(false);
       this.clearPlayTimer();
+      this.toastService.show(`Couldn't play "${song.title}". The audio file may be missing or unsupported.`, 'error');
     });
 
-    this.audio.play().catch(() => {
+    audioEl.play().catch(() => {
+      if (!isLive()) return;
       this.isLoadingSubject.next(false);
     });
   }

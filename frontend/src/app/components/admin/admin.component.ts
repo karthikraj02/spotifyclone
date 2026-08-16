@@ -2,14 +2,16 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { SongService, Song } from '../../services/song.service';
-import { ArtistService, ArtistDetail } from '../../services/artist.service';
+import { ArtistService, ArtistListItem } from '../../services/artist.service';
+import { AlbumService, AlbumListItem } from '../../services/album.service';
 import { UserService } from '../../services/user.service';
-import { User } from '../../services/auth.service';
+import { User, AuthService } from '../../services/auth.service';
+import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, AssetUrlPipe],
   template: `
     <div class="admin-page">
       <h1>Admin Panel</h1>
@@ -17,6 +19,7 @@ import { User } from '../../services/auth.service';
       <div class="tabs">
         <button [class.active]="activeTab === 'songs'" (click)="activeTab = 'songs'">Songs</button>
         <button [class.active]="activeTab === 'artists'" (click)="activeTab = 'artists'">Artists</button>
+        <button [class.active]="activeTab === 'albums'" (click)="activeTab = 'albums'; loadAlbums()">Albums</button>
         <button [class.active]="activeTab === 'users'" (click)="activeTab = 'users'; loadUsers()">Users</button>
       </div>
 
@@ -29,8 +32,8 @@ import { User } from '../../services/auth.service';
 
       @if (activeTab === 'songs') {
         <div class="section">
-          <h2>Add New Song</h2>
-          <form [formGroup]="songForm" (ngSubmit)="addSong()" class="form-grid">
+          <h2>{{ editingSongId ? 'Edit Song' : 'Add New Song' }}</h2>
+          <form [formGroup]="songForm" (ngSubmit)="saveSong()" class="form-grid">
             <div class="form-group">
               <label>Title *</label>
               <input type="text" formControlName="title" placeholder="Song title" />
@@ -45,12 +48,15 @@ import { User } from '../../services/auth.service';
               </select>
             </div>
             <div class="form-group">
-              <label>Audio File or URL *</label>
+              <label>Audio File or URL {{ editingSongId ? '' : '*' }}</label>
               <div class="file-url-group">
                 <input type="file" (change)="onAudioSelected($event)" accept="audio/*" />
                 <span class="or">OR</span>
                 <input type="url" formControlName="audioUrl" placeholder="https://..." />
               </div>
+              @if (editingSongId) {
+                <span class="hint">Leave the file/URL as-is to keep the current audio.</span>
+              }
             </div>
             <div class="form-group">
               <label>Cover Image File or URL</label>
@@ -68,9 +74,14 @@ import { User } from '../../services/auth.service';
               <label>Genre</label>
               <input type="text" formControlName="genre" placeholder="Pop, Rock, Hip-Hop..." />
             </div>
-            <button type="submit" class="submit-btn" [disabled]="songForm.invalid || isAddingSong">
-              {{ isAddingSong ? 'Adding...' : 'Add Song' }}
-            </button>
+            <div class="form-actions">
+              <button type="submit" class="submit-btn" [disabled]="songForm.invalid || isSavingSong">
+                {{ isSavingSong ? 'Saving...' : (editingSongId ? 'Update Song' : 'Add Song') }}
+              </button>
+              @if (editingSongId) {
+                <button type="button" class="cancel-btn" (click)="cancelEditSong()">Cancel</button>
+              }
+            </div>
           </form>
 
           <h2 style="margin-top: 2rem;">All Songs</h2>
@@ -89,12 +100,13 @@ import { User } from '../../services/auth.service';
               <tbody>
                 @for (song of songs; track song._id) {
                   <tr>
-                    <td><img [src]="song.coverUrl" [alt]="song.title" class="thumb" /></td>
+                    <td><img [src]="song.coverUrl | assetUrl" [alt]="song.title" class="thumb" /></td>
                     <td>{{ song.title }}</td>
                     <td>{{ song.artist.name }}</td>
                     <td>{{ formatDuration(song.duration) }}</td>
                     <td>{{ song.plays }}</td>
-                    <td>
+                    <td class="actions-cell">
+                      <button class="edit-btn" (click)="editSong(song)">Edit</button>
                       <button class="delete-btn" (click)="deleteSong(song._id)">Delete</button>
                     </td>
                   </tr>
@@ -107,8 +119,8 @@ import { User } from '../../services/auth.service';
 
       @if (activeTab === 'artists') {
         <div class="section">
-          <h2>Add New Artist</h2>
-          <form [formGroup]="artistForm" (ngSubmit)="addArtist()" class="form-grid">
+          <h2>{{ editingArtistId ? 'Edit Artist' : 'Add New Artist' }}</h2>
+          <form [formGroup]="artistForm" (ngSubmit)="saveArtist()" class="form-grid">
             <div class="form-group">
               <label>Name *</label>
               <input type="text" formControlName="name" placeholder="Artist name" />
@@ -121,9 +133,14 @@ import { User } from '../../services/auth.service';
               <label>Image URL</label>
               <input type="url" formControlName="image" placeholder="https://..." />
             </div>
-            <button type="submit" class="submit-btn" [disabled]="artistForm.invalid || isAddingArtist">
-              {{ isAddingArtist ? 'Adding...' : 'Add Artist' }}
-            </button>
+            <div class="form-actions">
+              <button type="submit" class="submit-btn" [disabled]="artistForm.invalid || isSavingArtist">
+                {{ isSavingArtist ? 'Saving...' : (editingArtistId ? 'Update Artist' : 'Add Artist') }}
+              </button>
+              @if (editingArtistId) {
+                <button type="button" class="cancel-btn" (click)="cancelEditArtist()">Cancel</button>
+              }
+            </div>
           </form>
 
           <h2 style="margin-top: 2rem;">All Artists</h2>
@@ -135,20 +152,106 @@ import { User } from '../../services/auth.service';
                   <th>Name</th>
                   <th>Followers</th>
                   <th>Songs</th>
+                  <th>Albums</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 @for (artist of artists; track artist._id) {
                   <tr>
-                    <td><img [src]="artist.image" [alt]="artist.name" class="thumb" /></td>
+                    <td><img [src]="artist.image | assetUrl" [alt]="artist.name" class="thumb" /></td>
                     <td>{{ artist.name }}</td>
                     <td>{{ artist.followers }}</td>
-                    <td>{{ artist.songs.length || 0 }}</td>
+                    <td>{{ artist.songsCount || 0 }}</td>
+                    <td>{{ artist.albumsCount || 0 }}</td>
+                    <td class="actions-cell">
+                      <button class="edit-btn" (click)="editArtist(artist)">Edit</button>
+                      <button class="delete-btn" (click)="deleteArtist(artist._id)">Delete</button>
+                    </td>
                   </tr>
                 }
               </tbody>
             </table>
           </div>
+        </div>
+      }
+
+      @if (activeTab === 'albums') {
+        <div class="section">
+          <h2>{{ editingAlbumId ? 'Edit Album' : 'Add New Album' }}</h2>
+          <form [formGroup]="albumForm" (ngSubmit)="saveAlbum()" class="form-grid">
+            <div class="form-group">
+              <label>Title *</label>
+              <input type="text" formControlName="title" placeholder="Album title" />
+            </div>
+            <div class="form-group">
+              <label>Artist *</label>
+              <select formControlName="artistId" [class.disabled]="!!editingAlbumId">
+                <option value="">Select artist</option>
+                @for (artist of artists; track artist._id) {
+                  <option [value]="artist._id">{{ artist.name }}</option>
+                }
+              </select>
+              @if (editingAlbumId) {
+                <span class="hint">The artist of an existing album can't be changed here - delete and re-add if needed.</span>
+              }
+            </div>
+            <div class="form-group">
+              <label>Cover Image URL</label>
+              <input type="url" formControlName="coverUrl" placeholder="https://..." />
+            </div>
+            <div class="form-group">
+              <label>Release Date</label>
+              <input type="date" formControlName="releaseDate" />
+            </div>
+            <div class="form-group">
+              <label>Genre</label>
+              <input type="text" formControlName="genre" placeholder="Pop, Rock, Hip-Hop..." />
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="submit-btn" [disabled]="albumForm.invalid || isSavingAlbum">
+                {{ isSavingAlbum ? 'Saving...' : (editingAlbumId ? 'Update Album' : 'Add Album') }}
+              </button>
+              @if (editingAlbumId) {
+                <button type="button" class="cancel-btn" (click)="cancelEditAlbum()">Cancel</button>
+              }
+            </div>
+          </form>
+
+          <h2 style="margin-top: 2rem;">All Albums</h2>
+          @if (isLoadingAlbums) {
+            <div class="loading"><div class="spinner"></div></div>
+          } @else {
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Cover</th>
+                    <th>Title</th>
+                    <th>Artist</th>
+                    <th>Release Date</th>
+                    <th>Genre</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (album of albums; track album._id) {
+                    <tr>
+                      <td><img [src]="album.coverUrl | assetUrl" [alt]="album.title" class="thumb" /></td>
+                      <td>{{ album.title }}</td>
+                      <td>{{ album.artist.name }}</td>
+                      <td>{{ album.releaseDate | date: 'mediumDate' }}</td>
+                      <td>{{ album.genre }}</td>
+                      <td class="actions-cell">
+                        <button class="edit-btn" (click)="editAlbum(album)">Edit</button>
+                        <button class="delete-btn" (click)="deleteAlbum(album._id)">Delete</button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
         </div>
       }
 
@@ -176,9 +279,18 @@ import { User } from '../../services/auth.service';
                       <td>{{ user.email }}</td>
                       <td><span class="role-badge" [class.admin]="user.role === 'admin'">{{ user.role }}</span></td>
                       <td>{{ user.createdAt | date: 'mediumDate' }}</td>
-                      <td>
-                        @if (user.role !== 'admin') {
-                          <button class="delete-btn" (click)="deleteUser(user._id)">Delete</button>
+                      <td class="actions-cell">
+                        @if (user._id !== currentUserId) {
+                          @if (user.role === 'admin') {
+                            <button class="role-btn" [disabled]="isUpdatingRole === user._id" (click)="setRole(user, 'user')">Remove Admin</button>
+                          } @else {
+                            <button class="role-btn" [disabled]="isUpdatingRole === user._id" (click)="setRole(user, 'admin')">Make Admin</button>
+                          }
+                          @if (user.role !== 'admin') {
+                            <button class="delete-btn" (click)="deleteUser(user._id)">Delete</button>
+                          }
+                        } @else {
+                          <span class="you-badge">You</span>
                         }
                       </td>
                     </tr>
@@ -241,32 +353,58 @@ import { User } from '../../services/auth.service';
           border-radius: 4px;
           color: #fff;
           font-size: 0.875rem;
-          &::placeholder { color: #727272; }
-          &:focus { outline: none; border-color: #fff; }
+          &:focus { outline: none; border-color: #1DB954; }
+          &.disabled { opacity: 0.5; pointer-events: none; }
         }
-        select option { background: #282828; }
         textarea { resize: vertical; }
-        .file-url-group {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          input[type="file"] { padding: 0.5rem; flex: 1; }
-          .or { font-size: 0.75rem; color: #B3B3B3; font-weight: 700; }
+        .hint { display: block; margin-top: 0.375rem; font-size: 0.75rem; color: #727272; }
+      }
+
+      .file-url-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        input[type="file"] {
+          flex: 1;
+          padding: 0.5rem;
+          font-size: 0.75rem;
         }
+        input[type="url"] { flex: 1; }
+        .or { color: #727272; font-size: 0.75rem; font-weight: 700; }
+      }
+
+      .form-actions {
+        display: flex;
+        align-items: flex-end;
+        gap: 0.75rem;
       }
 
       .submit-btn {
-        grid-column: 1 / -1;
-        padding: 0.75rem 2rem;
+        padding: 0.75rem 1.5rem;
         background: #1DB954;
         color: #000;
         border: none;
         border-radius: 500px;
         font-weight: 700;
         cursor: pointer;
+        height: fit-content;
         width: fit-content;
         &:hover:not(:disabled) { background: #1ed760; }
         &:disabled { opacity: 0.6; cursor: not-allowed; }
+      }
+
+      .cancel-btn {
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        color: #fff;
+        border: 1px solid #727272;
+        border-radius: 500px;
+        font-weight: 700;
+        cursor: pointer;
+        height: fit-content;
+        width: fit-content;
+        &:hover { border-color: #fff; }
       }
     }
 
@@ -287,6 +425,8 @@ import { User } from '../../services/auth.service';
 
       .thumb { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; }
 
+      .actions-cell { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
       .delete-btn {
         padding: 0.375rem 0.75rem;
         background: transparent;
@@ -297,6 +437,37 @@ import { User } from '../../services/auth.service';
         font-weight: 600;
         cursor: pointer;
         &:hover { background: rgba(233,20,41,0.1); }
+      }
+
+      .edit-btn {
+        padding: 0.375rem 0.75rem;
+        background: transparent;
+        border: 1px solid #727272;
+        color: #fff;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        &:hover { border-color: #fff; }
+      }
+
+      .role-btn {
+        padding: 0.375rem 0.75rem;
+        background: transparent;
+        border: 1px solid #1DB954;
+        color: #1DB954;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        &:hover:not(:disabled) { background: rgba(29,185,84,0.1); }
+        &:disabled { opacity: 0.6; cursor: not-allowed; }
+      }
+
+      .you-badge {
+        font-size: 0.75rem;
+        color: #727272;
+        font-style: italic;
       }
 
       .role-badge {
@@ -318,26 +489,39 @@ import { User } from '../../services/auth.service';
   `]
 })
 export class AdminComponent implements OnInit {
-  activeTab: 'songs' | 'artists' | 'users' = 'songs';
+  activeTab: 'songs' | 'artists' | 'albums' | 'users' = 'songs';
   songs: Song[] = [];
-  artists: ArtistDetail[] = [];
+  artists: ArtistListItem[] = [];
+  albums: AlbumListItem[] = [];
   users: User[] = [];
+  currentUserId: string | undefined;
+
   isLoadingUsers = false;
-  isAddingSong = false;
-  isAddingArtist = false;
+  isLoadingAlbums = false;
+  isSavingSong = false;
+  isSavingArtist = false;
+  isSavingAlbum = false;
+  isUpdatingRole: string | null = null;
   successMsg = '';
   errorMsg = '';
-  
+
+  editingSongId: string | null = null;
+  editingArtistId: string | null = null;
+  editingAlbumId: string | null = null;
+
   audioFile: File | null = null;
   coverFile: File | null = null;
 
   songForm: FormGroup;
   artistForm: FormGroup;
+  albumForm: FormGroup;
 
   constructor(
     private songService: SongService,
     private artistService: ArtistService,
+    private albumService: AlbumService,
     private userService: UserService,
+    private authService: AuthService,
     private fb: FormBuilder
   ) {
     this.songForm = this.fb.group({
@@ -354,31 +538,32 @@ export class AdminComponent implements OnInit {
       bio: [''],
       image: ['']
     });
+
+    this.albumForm = this.fb.group({
+      title: ['', Validators.required],
+      artistId: ['', Validators.required],
+      coverUrl: [''],
+      releaseDate: [''],
+      genre: ['']
+    });
   }
 
   ngOnInit(): void {
+    this.currentUserId = this.authService.currentUser()?._id;
     this.loadSongs();
     this.loadArtists();
   }
 
+  private flashSuccess(msg: string): void {
+    this.successMsg = msg;
+    setTimeout(() => this.successMsg = '', 3000);
+  }
+
+  // ---------- Songs ----------
+
   loadSongs(): void {
     this.songService.getSongs(1, 50).subscribe({
       next: res => { this.songs = res.songs; }
-    });
-  }
-
-  loadArtists(): void {
-    this.artistService.getAll().subscribe({
-      next: artists => { this.artists = artists; }
-    });
-  }
-
-  loadUsers(): void {
-    if (this.users.length > 0) return;
-    this.isLoadingUsers = true;
-    this.userService.getAllUsers().subscribe({
-      next: res => { this.users = res.users; this.isLoadingUsers = false; },
-      error: () => { this.isLoadingUsers = false; }
     });
   }
 
@@ -398,59 +583,90 @@ export class AdminComponent implements OnInit {
     }
   }
 
-  addSong(): void {
+  editSong(song: Song): void {
+    this.editingSongId = song._id;
+    this.audioFile = null;
+    this.coverFile = null;
+    this.errorMsg = '';
+    this.songForm.setValue({
+      title: song.title,
+      artistId: song.artist._id,
+      audioUrl: song.audioUrl.startsWith('http') ? song.audioUrl : song.audioUrl,
+      coverUrl: song.coverUrl.startsWith('http') ? song.coverUrl : song.coverUrl,
+      duration: song.duration,
+      genre: song.genre
+    });
+  }
+
+  cancelEditSong(): void {
+    this.resetSongForm();
+  }
+
+  private resetSongForm(): void {
+    this.editingSongId = null;
+    this.songForm.reset();
+    this.audioFile = null;
+    this.coverFile = null;
+    const fileInputs = document.querySelectorAll('input[type="file"]') as NodeListOf<HTMLInputElement>;
+    fileInputs.forEach(input => input.value = '');
+  }
+
+  saveSong(): void {
     const { title, artistId, audioUrl, coverUrl, duration, genre } = this.songForm.value;
-    
-    // Validate either file or URL is present
+
+    // Validate either file or URL is present (existing URL counts when editing)
     if (!this.audioFile && !audioUrl) {
       this.errorMsg = 'Audio file or URL is required';
       return;
     }
-    
+
     if (this.songForm.invalid) {
       this.errorMsg = 'Please fill all required fields correctly.';
       return;
     }
-    
-    this.isAddingSong = true;
+
+    this.isSavingSong = true;
     this.errorMsg = '';
 
     const formData = new FormData();
     formData.append('title', title);
     formData.append('artistId', artistId);
     formData.append('duration', duration.toString());
-    
+
     if (this.audioFile) {
       formData.append('audio', this.audioFile);
     } else if (audioUrl) {
       formData.append('audioUrl', audioUrl);
     }
-    
+
     if (this.coverFile) {
       formData.append('cover', this.coverFile);
     } else if (coverUrl) {
       formData.append('coverUrl', coverUrl);
     }
-    
+
     if (genre) formData.append('genre', genre);
 
-    this.songService.createSong(formData).subscribe({
+    const isEditing = !!this.editingSongId;
+    const request$ = isEditing
+      ? this.songService.updateSong(this.editingSongId!, formData)
+      : this.songService.createSong(formData);
+
+    request$.subscribe({
       next: song => {
-        this.songs.unshift(song);
-        this.songForm.reset();
-        this.audioFile = null;
-        this.coverFile = null;
-        // Reset file inputs manually
-        const fileInputs = document.querySelectorAll('input[type="file"]') as NodeListOf<HTMLInputElement>;
-        fileInputs.forEach(input => input.value = '');
-        
-        this.successMsg = `Song "${song.title}" added successfully!`;
-        this.isAddingSong = false;
-        setTimeout(() => this.successMsg = '', 3000);
+        if (isEditing) {
+          const idx = this.songs.findIndex(s => s._id === song._id);
+          if (idx >= 0) this.songs[idx] = song;
+        } else {
+          this.songs.unshift(song);
+        }
+        this.flashSuccess(`Song "${song.title}" ${isEditing ? 'updated' : 'added'} successfully!`);
+        this.resetSongForm();
+        this.isSavingSong = false;
       },
       error: err => {
-        this.errorMsg = err.error?.message || 'Failed to add song';
-        this.isAddingSong = false;
+        this.errorMsg = err.error?.message || `Failed to ${isEditing ? 'update' : 'add'} song`;
+        this.isSavingSong = false;
       }
     });
   }
@@ -460,29 +676,178 @@ export class AdminComponent implements OnInit {
     this.songService.deleteSong(id).subscribe({
       next: () => {
         this.songs = this.songs.filter(s => s._id !== id);
-        this.successMsg = 'Song deleted successfully';
-        setTimeout(() => this.successMsg = '', 3000);
+        this.flashSuccess('Song deleted successfully');
       },
       error: err => { this.errorMsg = err.error?.message || 'Failed to delete song'; }
     });
   }
 
-  addArtist(): void {
+  // ---------- Artists ----------
+
+  loadArtists(): void {
+    this.artistService.getAll().subscribe({
+      next: artists => { this.artists = artists; }
+    });
+  }
+
+  editArtist(artist: ArtistListItem): void {
+    this.editingArtistId = artist._id;
+    this.errorMsg = '';
+    this.artistForm.setValue({
+      name: artist.name,
+      bio: artist.bio || '',
+      image: artist.image || ''
+    });
+  }
+
+  cancelEditArtist(): void {
+    this.editingArtistId = null;
+    this.artistForm.reset();
+  }
+
+  saveArtist(): void {
     if (this.artistForm.invalid) return;
-    this.isAddingArtist = true;
+    this.isSavingArtist = true;
     this.errorMsg = '';
 
-    this.artistService.create(this.artistForm.value).subscribe({
+    const isEditing = !!this.editingArtistId;
+    const request$ = isEditing
+      ? this.artistService.update(this.editingArtistId!, this.artistForm.value)
+      : this.artistService.create(this.artistForm.value);
+
+    request$.subscribe({
       next: artist => {
-        this.artists.unshift(artist);
+        if (isEditing) {
+          const idx = this.artists.findIndex(a => a._id === artist._id);
+          if (idx >= 0) this.artists[idx] = artist;
+        } else {
+          this.artists.unshift(artist);
+        }
+        this.flashSuccess(`Artist "${artist.name}" ${isEditing ? 'updated' : 'added'} successfully!`);
+        this.editingArtistId = null;
         this.artistForm.reset();
-        this.successMsg = `Artist "${artist.name}" added successfully!`;
-        this.isAddingArtist = false;
-        setTimeout(() => this.successMsg = '', 3000);
+        this.isSavingArtist = false;
       },
       error: err => {
-        this.errorMsg = err.error?.message || 'Failed to add artist';
-        this.isAddingArtist = false;
+        this.errorMsg = err.error?.message || `Failed to ${isEditing ? 'update' : 'add'} artist`;
+        this.isSavingArtist = false;
+      }
+    });
+  }
+
+  deleteArtist(id: string): void {
+    if (!confirm('Delete this artist? This will fail if they still have songs or albums attached.')) return;
+    this.artistService.delete(id).subscribe({
+      next: () => {
+        this.artists = this.artists.filter(a => a._id !== id);
+        this.flashSuccess('Artist deleted successfully');
+      },
+      error: err => { this.errorMsg = err.error?.message || 'Failed to delete artist'; }
+    });
+  }
+
+  // ---------- Albums ----------
+
+  loadAlbums(): void {
+    if (this.albums.length > 0) return;
+    this.isLoadingAlbums = true;
+    this.albumService.getAll().subscribe({
+      next: albums => { this.albums = albums; this.isLoadingAlbums = false; },
+      error: () => { this.isLoadingAlbums = false; }
+    });
+  }
+
+  editAlbum(album: AlbumListItem): void {
+    this.editingAlbumId = album._id;
+    this.errorMsg = '';
+    this.albumForm.setValue({
+      title: album.title,
+      artistId: album.artist._id,
+      coverUrl: album.coverUrl || '',
+      releaseDate: album.releaseDate ? album.releaseDate.substring(0, 10) : '',
+      genre: album.genre || ''
+    });
+  }
+
+  cancelEditAlbum(): void {
+    this.editingAlbumId = null;
+    this.albumForm.reset();
+  }
+
+  saveAlbum(): void {
+    if (this.albumForm.invalid) return;
+    this.isSavingAlbum = true;
+    this.errorMsg = '';
+
+    const { title, artistId, coverUrl, releaseDate, genre } = this.albumForm.value;
+    const isEditing = !!this.editingAlbumId;
+
+    const request$ = isEditing
+      ? this.albumService.update(this.editingAlbumId!, { title, coverUrl, releaseDate, genre })
+      : this.albumService.create({ title, artistId, coverUrl, releaseDate, genre });
+
+    request$.subscribe({
+      next: album => {
+        if (isEditing) {
+          const idx = this.albums.findIndex(a => a._id === album._id);
+          if (idx >= 0) this.albums[idx] = album;
+        } else {
+          this.albums.unshift(album);
+          // Reflect the new album in the artist's album count without a full reload
+          const artist = this.artists.find(a => a._id === artistId);
+          if (artist) artist.albumsCount = (artist.albumsCount || 0) + 1;
+        }
+        this.flashSuccess(`Album "${album.title}" ${isEditing ? 'updated' : 'added'} successfully!`);
+        this.editingAlbumId = null;
+        this.albumForm.reset();
+        this.isSavingAlbum = false;
+      },
+      error: err => {
+        this.errorMsg = err.error?.message || `Failed to ${isEditing ? 'update' : 'add'} album`;
+        this.isSavingAlbum = false;
+      }
+    });
+  }
+
+  deleteAlbum(id: string): void {
+    if (!confirm('Delete this album? Its songs will be kept but unlinked from the album.')) return;
+    this.albumService.delete(id).subscribe({
+      next: () => {
+        const removed = this.albums.find(a => a._id === id);
+        this.albums = this.albums.filter(a => a._id !== id);
+        if (removed) {
+          const artist = this.artists.find(a => a._id === removed.artist._id);
+          if (artist && artist.albumsCount > 0) artist.albumsCount -= 1;
+        }
+        this.flashSuccess('Album deleted successfully');
+      },
+      error: err => { this.errorMsg = err.error?.message || 'Failed to delete album'; }
+    });
+  }
+
+  // ---------- Users ----------
+
+  loadUsers(): void {
+    if (this.users.length > 0) return;
+    this.isLoadingUsers = true;
+    this.userService.getAllUsers().subscribe({
+      next: res => { this.users = res.users; this.isLoadingUsers = false; },
+      error: () => { this.isLoadingUsers = false; }
+    });
+  }
+
+  setRole(user: User, role: 'admin' | 'user'): void {
+    this.isUpdatingRole = user._id;
+    this.userService.updateRole(user._id, role).subscribe({
+      next: res => {
+        const idx = this.users.findIndex(u => u._id === user._id);
+        if (idx >= 0) this.users[idx] = res.user;
+        this.flashSuccess(`${user.username} is now ${role === 'admin' ? 'an admin' : 'a regular user'}.`);
+        this.isUpdatingRole = null;
+      },
+      error: err => {
+        this.errorMsg = err.error?.message || 'Failed to update role';
+        this.isUpdatingRole = null;
       }
     });
   }
@@ -492,8 +857,7 @@ export class AdminComponent implements OnInit {
     this.userService.deleteUser(id).subscribe({
       next: () => {
         this.users = this.users.filter(u => u._id !== id);
-        this.successMsg = 'User deleted successfully';
-        setTimeout(() => this.successMsg = '', 3000);
+        this.flashSuccess('User deleted successfully');
       },
       error: err => { this.errorMsg = err.error?.message || 'Failed to delete user'; }
     });

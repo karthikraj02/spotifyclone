@@ -1,14 +1,16 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ArtistService, ArtistDetail } from '../../services/artist.service';
 import { PlayerService } from '../../services/player.service';
+import { AuthService } from '../../services/auth.service';
 import { SongCardComponent } from '../shared/song-card/song-card.component';
+import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-artist',
   standalone: true,
-  imports: [CommonModule, SongCardComponent],
+  imports: [CommonModule, RouterLink, SongCardComponent, AssetUrlPipe],
   template: `
     <div class="artist-page">
       @if (isLoading) {
@@ -18,7 +20,7 @@ import { SongCardComponent } from '../shared/song-card/song-card.component';
       } @else {
         <div class="artist-hero" [style.background]="heroGradient">
           <div class="hero-image">
-            <img [src]="artist.image" [alt]="artist.name" />
+            <img [src]="artist.image | assetUrl" [alt]="artist.name" />
           </div>
           <div class="hero-info">
             <span class="type">Artist</span>
@@ -35,6 +37,14 @@ import { SongCardComponent } from '../shared/song-card/song-card.component';
               </svg>
             </button>
           }
+          <button
+            class="follow-btn"
+            [class.following]="isFollowing"
+            [disabled]="isFollowLoading"
+            (click)="toggleFollow()"
+          >
+            {{ isFollowing ? 'Following' : 'Follow' }}
+          </button>
         </div>
 
         @if (artist.bio) {
@@ -65,13 +75,13 @@ import { SongCardComponent } from '../shared/song-card/song-card.component';
             <h2>Albums</h2>
             <div class="albums-grid">
               @for (album of artist.albums; track album._id) {
-                <div class="album-card">
+                <a [routerLink]="['/album', album._id]" class="album-card">
                   <div class="album-cover">
-                    <img [src]="album.coverUrl" [alt]="album.title" />
+                    <img [src]="album.coverUrl | assetUrl" [alt]="album.title" />
                   </div>
                   <p class="album-title">{{ album.title }}</p>
                   <span class="album-year">{{ album.releaseDate | date: 'yyyy' }} • Album</span>
-                </div>
+                </a>
               }
             </div>
           </section>
@@ -135,6 +145,21 @@ import { SongCardComponent } from '../shared/song-card/song-card.component';
         color: #000;
         &:hover { transform: scale(1.05); background: #1ed760; }
       }
+
+      .follow-btn {
+        padding: 0.5rem 1.25rem;
+        border-radius: 500px;
+        background: transparent;
+        border: 1px solid #727272;
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: border-color 0.1s;
+        &:hover:not(:disabled) { border-color: #fff; }
+        &:disabled { opacity: 0.6; cursor: not-allowed; }
+        &.following { border-color: #1DB954; color: #1DB954; }
+      }
     }
 
     .bio-section, .songs-section, .albums-section {
@@ -172,6 +197,9 @@ import { SongCardComponent } from '../shared/song-card/song-card.component';
       padding: 1rem;
       cursor: pointer;
       transition: background 0.2s;
+      display: block;
+      text-decoration: none;
+      color: inherit;
       &:hover { background: #282828; }
 
       .album-cover {
@@ -193,24 +221,65 @@ export class ArtistComponent implements OnInit {
   isLoading = true;
   showAllSongs = false;
   heroGradient = 'linear-gradient(to bottom, #3d3d3d, #121212)';
+  isFollowing = false;
+  isFollowLoading = false;
 
   constructor(
     private route: ActivatedRoute,
     private artistService: ArtistService,
-    private playerService: PlayerService
+    private playerService: PlayerService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id')!;
+    // Subscribe rather than read the route snapshot once: this component is reused
+    // by Angular's default router strategy when navigating between two /artist/:id
+    // routes (e.g. clicking a different artist link from this same page), so a
+    // one-time snapshot read would leave the page showing the previous artist.
+    this.route.paramMap.subscribe(params => {
+      const id = params.get('id');
+      if (!id) return;
+      this.loadArtist(id);
+    });
+  }
+
+  private loadArtist(id: string): void {
+    this.isLoading = true;
+    this.showAllSongs = false;
+    this.artist = null;
+
     this.artistService.getById(id).subscribe({
-      next: artist => { this.artist = artist; this.isLoading = false; },
+      next: artist => {
+        this.artist = artist;
+        this.isLoading = false;
+      },
       error: () => { this.isLoading = false; }
     });
+
+    if (this.authService.isLoggedIn()) {
+      this.artistService.getFollowStatus(id).subscribe({
+        next: res => { this.isFollowing = res.following; },
+        error: () => { /* non-critical - leave default state */ }
+      });
+    }
   }
 
   playAll(): void {
     if (this.artist?.songs.length) {
       this.playerService.playQueue(this.artist.songs);
     }
+  }
+
+  toggleFollow(): void {
+    if (!this.artist || this.isFollowLoading) return;
+    this.isFollowLoading = true;
+    this.artistService.toggleFollow(this.artist._id).subscribe({
+      next: res => {
+        this.isFollowing = res.following;
+        if (this.artist) this.artist.followers = res.followers;
+        this.isFollowLoading = false;
+      },
+      error: () => { this.isFollowLoading = false; }
+    });
   }
 }

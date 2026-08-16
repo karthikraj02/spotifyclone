@@ -3,16 +3,17 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Playlist } from '../../../services/playlist.service';
 import { PlayerService } from '../../../services/player.service';
+import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-playlist-card',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, AssetUrlPipe],
   template: `
     <div class="playlist-card" (mouseenter)="isHovered = true" (mouseleave)="isHovered = false">
       <a [routerLink]="['/playlist', playlist._id]" class="card-link">
         <div class="cover-wrapper">
-          <img [src]="playlist.coverUrl" [alt]="playlist.name" />
+          <img [src]="playlist.coverUrl | assetUrl" [alt]="playlist.name" />
           @if (isHovered && playlist.songs.length > 0) {
             <button class="play-fab" (click)="playPlaylist($event)">
               <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">

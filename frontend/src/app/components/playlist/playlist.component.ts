@@ -5,11 +5,12 @@ import { PlaylistService, Playlist } from '../../services/playlist.service';
 import { PlayerService } from '../../services/player.service';
 import { AuthService } from '../../services/auth.service';
 import { SongCardComponent } from '../shared/song-card/song-card.component';
+import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-playlist',
   standalone: true,
-  imports: [CommonModule, RouterLink, SongCardComponent],
+  imports: [CommonModule, RouterLink, SongCardComponent, AssetUrlPipe],
   template: `
     <div class="playlist-page">
       @if (isLoading) {
@@ -22,7 +23,7 @@ import { SongCardComponent } from '../shared/song-card/song-card.component';
       } @else {
         <div class="playlist-header" [style.background]="headerGradient">
           <div class="playlist-cover">
-            <img [src]="playlist.coverUrl" [alt]="playlist.name" />
+            <img [src]="playlist.coverUrl | assetUrl" [alt]="playlist.name" />
           </div>
           <div class="playlist-info">
             <span class="type">{{ playlist.isPublic ? 'Public' : 'Private' }} Playlist</span>
@@ -231,7 +232,20 @@ export class PlaylistComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id')!;
+    // Subscribe to paramMap (not a one-time snapshot read) so navigating from one
+    // playlist to another reuses this component correctly instead of showing stale data.
+    this.route.paramMap.subscribe(params => {
+      const id = params.get('id');
+      if (!id) return;
+      this.loadPlaylist(id);
+    });
+  }
+
+  private loadPlaylist(id: string): void {
+    this.isLoading = true;
+    this.playlist = null;
+    this.showDeleteConfirm = false;
+
     this.playlistService.getById(id).subscribe({
       next: playlist => {
         this.playlist = playlist;

@@ -4,18 +4,20 @@ import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { PlayerService, RepeatMode } from '../../services/player.service';
 import { SongService, Song } from '../../services/song.service';
+import { AuthService } from '../../services/auth.service';
+import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-player',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, AssetUrlPipe],
   template: `
     <div class="player-bar">
       <!-- Currently Playing -->
       <div class="now-playing">
         @if (currentSong) {
           <div class="song-thumb">
-            <img [src]="currentSong.coverUrl" [alt]="currentSong.title" />
+            <img [src]="currentSong.coverUrl | assetUrl" [alt]="currentSong.title" />
           </div>
           <div class="song-info">
             <p class="song-title">{{ currentSong.title }}</p>
@@ -25,10 +27,12 @@ import { SongService, Song } from '../../services/song.service';
           </div>
           <button
             class="like-btn player-icon-btn"
-            [class.liked]="false"
+            [class.liked]="isLiked"
+            [disabled]="isLikeLoading"
+            (click)="toggleLike()"
             title="Save to your Liked Songs"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <svg viewBox="0 0 24 24" [attr.fill]="isLiked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" width="16" height="16">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
           </button>
@@ -345,15 +349,25 @@ export class PlayerComponent implements OnInit, OnDestroy {
   volume = 1;
   isMuted = false;
   progressPercent = 0;
+  isLiked = false;
+  isLikeLoading = false;
 
   private subs: Subscription[] = [];
 
-  constructor(private playerService: PlayerService, public songService: SongService) {}
+  constructor(
+    private playerService: PlayerService,
+    public songService: SongService,
+    private authService: AuthService
+  ) {}
 
   ngOnInit(): void {
     this.subs.push(
       this.playerService.currentIndex$.subscribe(() => {
         this.currentSong = this.playerService.currentSong;
+        this.isLiked = this.currentSong ? this.authService.isLiked(this.currentSong._id) : false;
+      }),
+      this.authService.likedSongIds$.subscribe(ids => {
+        this.isLiked = this.currentSong ? ids.has(this.currentSong._id) : false;
       }),
       this.playerService.isPlaying$.subscribe(p => { this.isPlaying = p; }),
       this.playerService.isLoading$.subscribe(l => { this.isLoading = l; }),
@@ -379,6 +393,20 @@ export class PlayerComponent implements OnInit, OnDestroy {
   toggleShuffle(): void { this.playerService.toggleShuffle(); }
   toggleRepeat(): void { this.playerService.toggleRepeat(); }
   toggleMute(): void { this.playerService.toggleMute(); }
+
+  toggleLike(): void {
+    if (!this.currentSong || this.isLikeLoading) return;
+    const song = this.currentSong;
+    this.isLikeLoading = true;
+    this.songService.like(song._id).subscribe({
+      next: res => {
+        this.isLiked = res.liked;
+        this.authService.updateLikedSongs(song._id, res.liked);
+        this.isLikeLoading = false;
+      },
+      error: () => { this.isLikeLoading = false; }
+    });
+  }
 
   onSeek(event: MouseEvent): void {
     const target = event.currentTarget as HTMLElement;

@@ -46,6 +46,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'album/:id',
+    loadComponent: () => import('./components/album/album.component').then(m => m.AlbumComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'admin',
     loadComponent: () => import('./components/admin/admin.component').then(m => m.AdminComponent),
     canActivate: [adminGuard]

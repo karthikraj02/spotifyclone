@@ -78,6 +78,10 @@ export class SongService {
     return this.http.post<Song>(this.API, data);
   }
 
+  updateSong(id: string, data: FormData): Observable<Song> {
+    return this.http.put<Song>(`${this.API}/${id}`, data);
+  }
+
   deleteSong(id: string): Observable<{ message: string }> {
     return this.http.delete<{ message: string }>(`${this.API}/${id}`);
   }

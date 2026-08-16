@@ -4,11 +4,12 @@ import { RouterLink, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../services/auth.service';
 import { User } from '../../services/auth.service';
+import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-topbar',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, AssetUrlPipe],
   template: `
     <header class="topbar">
       <div class="nav-arrows">
@@ -29,7 +30,7 @@ import { User } from '../../services/auth.service';
           <div class="user-menu" (click)="toggleMenu()" [class.open]="menuOpen">
             <div class="avatar" [title]="user.username">
               @if (user.avatar) {
-                <img [src]="user.avatar" [alt]="user.username" />
+                <img [src]="user.avatar | assetUrl" [alt]="user.username" />
               } @else {
                 <span>{{ user.username.charAt(0).toUpperCase() }}</span>
               }

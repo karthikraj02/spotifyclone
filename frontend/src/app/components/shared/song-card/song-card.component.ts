@@ -1,15 +1,18 @@
-import { Component, Input, Output, EventEmitter, OnInit, DestroyRef, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, DestroyRef, inject, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Song, SongService } from '../../../services/song.service';
 import { PlayerService } from '../../../services/player.service';
 import { AuthService } from '../../../services/auth.service';
+import { PlaylistService, Playlist } from '../../../services/playlist.service';
+import { ToastService } from '../../../services/toast.service';
+import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-song-card',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, AssetUrlPipe],
   template: `
     <div
       class="song-card"
@@ -45,7 +48,7 @@ import { AuthService } from '../../../services/auth.service';
       </div>
 
       <div class="song-cover">
-        <img [src]="song.coverUrl" [alt]="song.title" />
+        <img [src]="song.coverUrl | assetUrl" [alt]="song.title" />
       </div>
 
       <div class="song-meta">
@@ -59,11 +62,37 @@ import { AuthService } from '../../../services/auth.service';
 
       @if (song.album) {
         <div class="song-album">
-          <span class="album-name">{{ song.album.title }}</span>
+          <a [routerLink]="['/album', song.album._id]" class="album-name" (click)="$event.stopPropagation()">
+            {{ song.album.title }}
+          </a>
         </div>
       }
 
       <div class="song-actions">
+        <div class="add-to-playlist-wrapper">
+          <button
+            class="add-btn icon-btn"
+            (click)="toggleAddMenu($event)"
+            title="Add to playlist"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+            </svg>
+          </button>
+          @if (showAddMenu) {
+            <div class="add-menu" (click)="$event.stopPropagation()">
+              @if (isLoadingPlaylists) {
+                <div class="add-menu-empty">Loading playlists…</div>
+              } @else if (myPlaylists.length === 0) {
+                <div class="add-menu-empty">No playlists yet - create one in your Library.</div>
+              } @else {
+                @for (pl of myPlaylists; track pl._id) {
+                  <button class="add-menu-item" (click)="addToPlaylist(pl)">{{ pl.name }}</button>
+                }
+              }
+            </div>
+          }
+        </div>
         <button
           class="like-btn icon-btn"
           [class.liked]="isLiked"
@@ -197,7 +226,8 @@ import { AuthService } from '../../../services/auth.service';
         text-overflow: ellipsis;
         white-space: nowrap;
         display: block;
-        &:hover { color: #fff; }
+        text-decoration: none;
+        &:hover { color: #fff; text-decoration: underline; }
       }
     }
 
@@ -225,6 +255,8 @@ import { AuthService } from '../../../services/auth.service';
         &:hover { color: #fff; }
       }
 
+      .add-btn { color: #B3B3B3; &:hover { color: #fff; } }
+
       .remove-btn { color: #B3B3B3; &:hover { color: #E91429; } }
 
       .duration {
@@ -233,6 +265,48 @@ import { AuthService } from '../../../services/auth.service';
         min-width: 36px;
         text-align: right;
       }
+    }
+
+    .add-to-playlist-wrapper {
+      position: relative;
+    }
+
+    .add-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 4px);
+      background: #282828;
+      border-radius: 4px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      min-width: 180px;
+      max-height: 240px;
+      overflow-y: auto;
+      z-index: 50;
+      padding: 0.25rem 0;
+    }
+
+    .add-menu-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 0.8125rem;
+      padding: 0.5rem 0.75rem;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      &:hover { background: rgba(255,255,255,0.1); }
+    }
+
+    .add-menu-empty {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      color: #B3B3B3;
+      max-width: 200px;
+      white-space: normal;
     }
 
     .song-card:hover .song-actions .icon-btn { opacity: 1; }
@@ -251,12 +325,20 @@ export class SongCardComponent implements OnInit {
   isCurrentSong = false;
   isPlaying = false;
 
+  showAddMenu = false;
+  isLoadingPlaylists = false;
+  myPlaylists: Playlist[] = [];
+  private playlistsLoaded = false;
+
   private destroyRef = inject(DestroyRef);
+  private elementRef = inject(ElementRef);
 
   constructor(
     public songService: SongService,
     private playerService: PlayerService,
-    private authService: AuthService
+    private authService: AuthService,
+    private playlistService: PlaylistService,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -311,5 +393,45 @@ export class SongCardComponent implements OnInit {
   onRemove(event: Event): void {
     event.stopPropagation();
     this.removed.emit(this.song._id);
+  }
+
+  toggleAddMenu(event: Event): void {
+    event.stopPropagation();
+    this.showAddMenu = !this.showAddMenu;
+    if (this.showAddMenu && !this.playlistsLoaded) {
+      this.isLoadingPlaylists = true;
+      this.playlistService.getMyPlaylists().subscribe({
+        next: playlists => {
+          this.myPlaylists = playlists;
+          this.playlistsLoaded = true;
+          this.isLoadingPlaylists = false;
+        },
+        error: () => { this.isLoadingPlaylists = false; }
+      });
+    }
+  }
+
+  addToPlaylist(playlist: Playlist): void {
+    this.playlistService.addSong(playlist._id, this.song._id).subscribe({
+      next: () => {
+        this.toastService.show(`Added to "${playlist.name}"`, 'info', 3000);
+        this.showAddMenu = false;
+      },
+      error: (err) => {
+        // A 409 here means the song is already in that playlist - not really an
+        // error from the user's point of view, so give a friendlier message.
+        if (err.status === 409) {
+          this.toastService.show(`Already in "${playlist.name}"`, 'info', 3000);
+        }
+        this.showAddMenu = false;
+      }
+    });
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.showAddMenu && !this.elementRef.nativeElement.contains(event.target)) {
+      this.showAddMenu = false;
+    }
   }
 }

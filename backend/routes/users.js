@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Playlist = require('../models/Playlist');
 const Song = require('../models/Song');
+const Artist = require('../models/Artist');
 const { auth, adminAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -109,6 +110,22 @@ router.get('/me/liked-songs', auth, async (req, res) => {
   }
 });
 
+// GET /api/users/me/followed-artists
+router.get('/me/followed-artists', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .populate('followedArtists', 'name image bio followers');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json(user.followedArtists || []);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // GET /api/users (admin)
 router.get('/', adminAuth, async (req, res) => {
   try {
@@ -125,6 +142,44 @@ router.get('/', adminAuth, async (req, res) => {
       users,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) }
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// PATCH /api/users/:id/role (admin) - promote/demote a user
+router.patch('/:id/role', adminAuth, async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+
+    const { role } = req.body;
+    if (role !== 'admin' && role !== 'user') {
+      return res.status(400).json({ success: false, message: "Role must be 'admin' or 'user'" });
+    }
+
+    if (req.params.id === req.user._id.toString()) {
+      return res.status(400).json({ success: false, message: 'You cannot change your own role' });
+    }
+
+    const target = await User.findById(req.params.id);
+    if (!target) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Prevent demoting the last remaining admin, which would lock everyone out of /admin
+    if (target.role === 'admin' && role === 'user') {
+      const adminCount = await User.countDocuments({ role: 'admin' });
+      if (adminCount <= 1) {
+        return res.status(400).json({ success: false, message: 'Cannot demote the last remaining admin' });
+      }
+    }
+
+    target.role = role;
+    await target.save();
+
+    res.json({ success: true, user: target });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
@@ -154,6 +209,14 @@ router.delete('/:id', adminAuth, async (req, res) => {
       await Song.updateMany(
         { _id: { $in: user.likedSongs } },
         { $inc: { likes: -1 } }
+      );
+    }
+
+    // Decrement follower counts for artists the user followed
+    if (user.followedArtists && user.followedArtists.length > 0) {
+      await Artist.updateMany(
+        { _id: { $in: user.followedArtists }, followers: { $gt: 0 } },
+        { $inc: { followers: -1 } }
       );
     }
 
